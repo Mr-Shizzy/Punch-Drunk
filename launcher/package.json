@@ -1,0 +1,76 @@
+{
+  "name": "fist-in-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fist-In!!: sets up and launches the Punch-Out!! (Wii) PC port, built on your computer from your own disc",
+  "main": "src/main.js",
+  "license": "MIT",
+  "author": "Fist-In!! contributors",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --linux AppImage",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.17.0"
+  },
+  "build": {
+    "appId": "dev.fistin.launcher",
+    "productName": "Fist-In Launcher",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts",
+        "filter": [
+          "build_port.sh",
+          "build_port.ps1"
+        ]
+      },
+      {
+        "from": "../port",
+        "to": "port-source",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Game",
+      "icon": "build/icon.png",
+      "artifactName": "Fist-In-Launcher.${ext}",
+      "executableArgs": [
+        "--no-sandbox"
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Fist-In-Launcher-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Fist-In!!",
+      "uninstallDisplayName": "Fist-In!! Launcher",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

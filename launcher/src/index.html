@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>Fist-In!! Launcher</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="assets/logo.png" alt="">
+      <span class="brand-name">Fist-In!!</span>
+    </div>
+    <nav class="nav-bar">
+      <button class="nav-item active" id="nav-play" data-page="play">Play</button>
+      <button class="nav-item" id="nav-archipelago" data-page="archipelago">Archipelago</button>
+      <button class="nav-item" id="nav-controls" data-page="controls">Controls</button>
+      <button class="nav-item" id="nav-settings" data-page="settings">Settings</button>
+      <button class="nav-item" id="nav-credits" data-page="credits">Credits</button>
+    </nav>
+    <div class="window-controls">
+      <button id="window-minimize" title="Minimize" aria-label="Minimize">&#x2013;</button>
+      <button id="window-fullscreen" title="Full screen" aria-label="Full screen">&#x25A1;</button>
+      <button id="window-close" title="Close" aria-label="Close">&#x2715;</button>
+    </div>
+  </header>
+
+  <main class="viewport">
+    <!-- Play -->
+    <section class="page active" id="page-play">
+      <div class="games">
+        <button class="game-tile selected" id="game-punchout" tabindex="0">
+          <span class="game-title">Punch-Out!!</span>
+          <span class="game-sub">Wii · USA</span>
+        </button>
+        <div class="game-tile disabled" aria-disabled="true" title="Not available yet">
+          <span class="game-title">Doc Louis's Punch-Out!!</span>
+          <span class="game-sub">Coming later</span>
+        </div>
+      </div>
+
+      <div class="card" id="setup">
+        <h2 id="setup-title">Set up Fist-In!!</h2>
+        <p class="muted" id="setup-intro">Bring your own disc: the port is built on this computer from your copy of the game. No game data is included.</p>
+        <ol class="steps">
+          <li class="step" id="step-1">
+            <div class="step-head"><span class="step-num">1</span><span class="step-title">Build tools</span><span class="step-state" id="step-1-state"></span></div>
+            <div class="step-body" id="step-1-body">
+              <ul class="tool-list" id="tool-list"></ul>
+              <div class="hint" id="tool-hint" hidden>
+                <p>Install them with:</p>
+                <pre id="tool-command"></pre>
+              </div>
+              <p class="muted" id="tool-managed" hidden>The launcher downloads these into its own folder; nothing else on your PC changes. The Visual C++ runtime is Microsoft's own installer, so Windows asks for permission. The compiler comes during the build.</p>
+              <div class="button-row">
+                <button id="install-tools" hidden>Download build tools</button>
+                <button class="secondary" id="copy-tool-command">Copy command</button>
+                <button class="secondary" id="recheck-tools">Check again</button>
+              </div>
+            </div>
+          </li>
+          <li class="step" id="step-2">
+            <div class="step-head"><span class="step-num">2</span><span class="step-title">Your disc</span><span class="step-state" id="step-2-state"></span></div>
+            <div class="step-body" id="step-2-body">
+              <p class="muted">Your Punch-Out!! (Wii, USA) disc. ISO, WBFS or RVZ.</p>
+              <div class="row"><span class="path" id="disc-path">No disc chosen</span><button id="choose-disc">Choose disc…</button></div>
+              <button class="link" id="choose-disc-folder">I already have it extracted (e.g. from Dolphin)…</button>
+              <p class="error" id="disc-error" hidden></p>
+            </div>
+          </li>
+          <li class="step" id="step-3">
+            <div class="step-head"><span class="step-num">3</span><span class="step-title">Build the port</span><span class="step-state" id="step-3-state"></span></div>
+            <div class="step-body" id="step-3-body">
+              <p class="muted">Extracts your disc and builds the game. The first build takes a while; later ones are quicker.</p>
+              <button id="build">Build</button>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="launch-panel">
+        <div class="launch-info">
+          <div class="launch-title" id="launch-title">Not ready yet</div>
+          <div class="launch-detail" id="launch-detail">Finish the setup above.</div>
+          <div class="ap-badge" id="ap-badge" hidden><img src="assets/archipelago.png" alt=""><span id="ap-badge-text">Archipelago</span></div>
+        </div>
+        <button class="play" id="play" disabled>Play</button>
+      </div>
+      <div class="progress" id="progress" hidden>
+        <div class="progress-text"><span id="progress-title"></span><span id="progress-detail"></span></div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-actions"><button class="secondary" id="stop">Stop</button><button class="secondary" id="show-log">Show log</button></div>
+      </div>
+    </section>
+
+    <!-- Archipelago -->
+    <section class="page" id="page-archipelago">
+      <div class="card ap-card">
+        <label class="ap-toggle" id="ap-toggle-label">
+          <input type="checkbox" id="ap-enabled">
+          <img src="assets/archipelago.png" alt="" class="ap-logo" id="ap-logo">
+          <span class="ap-toggle-text">
+            <strong>Play with Archipelago</strong>
+            <span class="muted" id="ap-status">Off</span>
+          </span>
+        </label>
+        <p class="muted">The game connects by itself when it starts. You can also connect or disconnect in the game: press F10 and open Archipelago. While it's on, the difficulty stays at Normal.</p>
+        <div class="fields">
+          <label class="field"><span>Server</span><input id="ap-server" placeholder="archipelago.gg:38281" spellcheck="false"></label>
+          <label class="field"><span>Slot name</span><input id="ap-slot" spellcheck="false"></label>
+          <label class="field"><span>Password</span><input id="ap-password" type="password" placeholder="(none)"></label>
+        </div>
+        <label class="switch"><input type="checkbox" id="ap-show-log"><span>Show the message panel in the game</span></label>
+        <details class="advanced">
+          <summary>Older servers</summary>
+          <p class="muted">Only needed when the server's Punch-Out!! apworld is older than 1.6.1 and doesn't send the fighter order: pick your seed's .appunchout file.</p>
+          <div class="row"><span class="path" id="ap-patch-file">None</span><button class="secondary" id="ap-choose-patch">Choose…</button><button class="secondary" id="ap-clear-patch">Clear</button></div>
+        </details>
+        <div class="row end"><span class="saved" id="ap-saved" hidden>Saved</span><button id="ap-save">Save</button></div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="page" id="page-controls">
+      <div class="card">
+        <h2>Controls</h2>
+        <p class="muted">A controller plays the game the way the Wii Remote held sideways does. Menus use the D-pad, A to choose and B to go back.</p>
+        <div class="segmented" role="radiogroup" aria-label="Button style" data-setting="buttonStyle">
+          <button data-value="auto" class="seg">Automatic</button>
+          <button data-value="xbox" class="seg">Xbox</button>
+          <button data-value="playstation" class="seg">PlayStation</button>
+        </div>
+        <p class="muted small" id="style-note">The in-game button prompts follow the controller you have plugged in.</p>
+        <table class="controls-table">
+          <thead><tr><th>Button</th><th>Wii Remote</th><th>In a fight</th></tr></thead>
+          <tbody id="controls-body"></tbody>
+        </table>
+        <p class="muted small">Rebinding comes in a later version.</p>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section class="page" id="page-settings">
+      <div class="card">
+        <h2>Gameplay</h2>
+        <p class="muted" id="difficulty-locked" hidden>Archipelago is on, so the difficulty stays at Normal.</p>
+        <div class="choices" id="difficulty-choices">
+          <label class="choice"><input type="radio" name="difficulty" value="normal"><span><strong>Normal</strong><span class="muted">The game as it is.</span></span></label>
+          <label class="choice"><input type="radio" name="difficulty" value="hard"><span><strong>Hard</strong><span class="muted">No restarting or quitting mid-fight.</span></span></label>
+          <label class="choice"><input type="radio" name="difficulty" value="insane"><span><strong>Insane</strong><span class="muted">No restart/quit. One knockdown and you're out.</span></span></label>
+        </div>
+        <p class="muted small">Career fights only. Also in the game: Options → Difficulty.</p>
+        <label class="switch"><input type="checkbox" id="skip-strap"><span>Skip the wrist-strap warning at start</span></label>
+      </div>
+      <div class="card">
+        <h2>Graphics</h2>
+        <p class="note">These are the same settings as the game's own menu: press <kbd>F10</kbd> in the game and open Graphics. Changing them either place changes both.</p>
+        <div class="setting">
+          <span class="label">Aspect ratio</span>
+          <div class="segmented" role="radiogroup" aria-label="Aspect ratio" data-setting="widescreen">
+            <button class="seg" data-value="true">16:9</button>
+            <button class="seg" data-value="false">4:3</button>
+          </div>
+        </div>
+        <label class="switch"><input type="checkbox" id="force-aspect"><span>Lock aspect ratio <span class="muted">· black bars when the window is a different shape</span></span></label>
+        <div class="setting">
+          <span class="label">Render resolution</span>
+          <div class="segmented" role="radiogroup" aria-label="Render resolution" data-setting="resolution">
+            <button class="seg" data-value="0" title="Matches the window size">Auto</button>
+            <button class="seg" data-value="1" title="The Wii's own resolution">Native</button>
+            <button class="seg" data-value="1.5">1.5×</button>
+            <button class="seg" data-value="2">2×</button>
+            <button class="seg" data-value="3">3×</button>
+            <button class="seg" data-value="4">4×</button>
+            <button class="seg" data-value="6">6×</button>
+            <button class="seg" data-value="8">8×</button>
+          </div>
+        </div>
+        <div class="setting">
+          <span class="label">Display mode</span>
+          <div class="segmented" role="radiogroup" aria-label="Display mode" data-setting="displayMode">
+            <button class="seg" data-value="windowed">Windowed</button>
+            <button class="seg" data-value="borderless">Borderless fullscreen</button>
+            <button class="seg" data-value="exclusive">Exclusive fullscreen</button>
+          </div>
+        </div>
+        <p class="muted small" id="graphics-note">Auto renders at the window's size. Native is the Wii's resolution; higher multiples look sharper but need a stronger graphics card. Aspect ratio changes apply the next time the game starts.</p>
+      </div>
+      <div class="card">
+        <h2>Advanced</h2>
+        <div class="row"><span class="label">Install folder</span><span class="path" id="data-root"></span><button class="secondary" id="choose-data-root">Change…</button></div>
+        <div class="row"><span class="label">Port files</span><span class="path" id="port-source"></span><button class="secondary" id="choose-port-source">Change…</button></div>
+        <div class="row wrap">
+          <button class="secondary" id="rebuild">Rebuild the port</button>
+          <button class="secondary" id="open-port">Open game folder</button>
+          <button class="secondary" id="open-logs">Open logs</button>
+          <button class="secondary" id="copy-log">Copy log</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Credits -->
+    <section class="page" id="page-credits">
+      <div class="card credits">
+        <h2>Credits</h2>
+        <p><strong>Not affiliated with or endorsed by Nintendo.</strong> Fist-In!! is a non-commercial fan project that plays Punch-Out!! (Wii) from your own disc. Punch-Out!! and Nintendo are trademarks of Nintendo; the game and its content are © Nintendo. This launcher contains no game code or data and builds the port from your own disc.</p>
+        <ul>
+          <li><strong>WiiCompiled</strong>: the static recompiler and runtime the port is built on (GPL-3.0). <a href="#" data-url="https://github.com/patchzyy/wiicompiled">github.com/patchzyy/wiicompiled</a></li>
+          <li><strong>SMS Launcher</strong> by Chase Myers: this launcher's starting point and its controller navigation (MIT). <a href="#" data-url="https://github.com/chasem-dev/sms-launcher">github.com/chasem-dev/sms-launcher</a></li>
+          <li><strong>Controller button glyphs</strong>: UI Elements by Arks (@ScissorMarks), Xbox and PS4 Buttons, CC BY 4.0. <a href="#" data-url="https://arks.itch.io">arks.itch.io</a></li>
+          <li><strong>Open Sans</strong> (in-game prompts): SIL Open Font License 1.1.</li>
+          <li><strong>nod</strong> (disc tool) by Luke Street: MIT / Apache-2.0. <a href="#" data-url="https://github.com/encounter/nod">github.com/encounter/nod</a></li>
+          <li><strong>Archipelago</strong>: multiworld randomizer. <a href="#" data-url="https://archipelago.gg">archipelago.gg</a></li>
+          <li><strong>nlohmann/json</strong> (Archipelago client): MIT.</li>
+        </ul>
+        <p class="muted small">Xbox is a registered trademark of Microsoft. PlayStation is a registered trademark of Sony Interactive Entertainment.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="log-drawer" id="log-drawer" hidden>
+    <div class="log-head"><strong>Activity</strong><span class="spacer"></span><button class="secondary" id="log-copy">Copy</button><button class="secondary" id="log-close">Close</button></div>
+    <pre class="log" id="log"></pre>
+  </div>
+
+  <footer class="statusbar">
+    <span id="status">Ready</span>
+    <span class="spacer"></span>
+    <span class="hints" id="pad-hints" hidden>Ⓐ Select · Ⓑ Back · LB/RB Pages</span>
+    <button class="link" id="toggle-log">Activity log</button>
+    <span class="muted small" id="version"></span>
+  </footer>
+</div>
+<script src="gamepad-nav.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

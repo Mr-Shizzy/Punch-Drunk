@@ -1,0 +1,678 @@
+'use strict';
+
+// Fist-In!! Launcher: main process. Sets up the port on the player's own computer from their own disc
+// (checks the build tools, validates and extracts the disc with nodtool, builds the port with
+// scripts/build_port.sh, or scripts/build_port.ps1 on Windows), then launches it. Settings live in the port's own Config.toml, so the game's F10 menu and
+// the launcher always agree.
+
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
+const { spawn, execFile } = require('node:child_process');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const fsp = require('node:fs/promises');
+const https = require('node:https');
+const os = require('node:os');
+const path = require('node:path');
+const toml = require('./toml-edit');
+
+// The one supported disc: Punch-Out!! (USA), its main.dol.
+const GAME_ID = 'R7PE01';
+const MAIN_DOL_MD5 = '1276cd5952e3b4c644925928786b3e20';
+// nodtool (encounter/nod, MIT / Apache-2.0): the same pinned release WiiCompiled's own setup uses.
+const NODTOOL = {
+  version: 'v2.0.0-alpha.10',
+  'linux-x64': { asset: 'nodtool-linux-x86_64', sha256: 'f853b83268b9542faf0d28815bc3a23c090ae28ebf397e46f99cbb08122c8307' },
+  'win32-x64': { asset: 'nodtool-windows-x86_64.exe', sha256: '1e150e33b88157527f96caea89ad12267aed8b117180c9ebaa89ebe89c1d948d' }
+};
+const IS_WIN = process.platform === 'win32';
+const EXE = IS_WIN ? '.exe' : '';
+// Windows: the launcher brings its own Git (MinGit, pinned) and .NET 8 SDK (the newest 8.0 SDK, checked against
+// Microsoft's own release list) into its tools folder, so players install nothing. The compiler, CMake and Ninja
+// come during the build, from WiiCompiled's own pinned Windows tool list (build_port.ps1 step 3).
+const MINGIT = {
+  version: '2.53.0',
+  url: 'https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/MinGit-2.53.0-64-bit.zip',
+  sha256: '82b562c918ec87b2ef5316ed79bb199e3a25719bb871a0f10294acf21ebd08cd'
+};
+const DOTNET_RELEASES = 'https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json';
+const VC_REDIST = 'https://aka.ms/vs/17/release/vc_redist.x64.exe';
+const TOOLS = [
+  { name: 'git', args: ['--version'] },
+  { name: 'dotnet', args: ['--list-sdks'], check: out => /^(8|9|1\d)\./m.test(out), need: '.NET SDK 8 or newer' },
+  { name: 'cmake', args: ['--version'] },
+  { name: 'ninja', args: ['--version'] },
+  { name: 'clang', args: ['--version'] },
+  { name: 'clang++', args: ['--version'] }
+];
+
+let win = null;
+let config = {};
+let task = null;      // { label, detail, percent }
+let child = null;     // the running build / game
+let gameRunning = false;
+let toolsCache = null;
+const logLines = [];
+
+// ---------------------------------------------------------------------------------------------------------------
+// Config and paths
+
+const configFile = () => path.join(app.getPath('userData'), 'preferences.json');
+function loadConfig() {
+  // Preferences from before the rename ("Punch-Out PC Launcher") carry over once.
+  const legacy = path.join(app.getPath('appData'), 'Punch-Out PC Launcher', 'preferences.json');
+  if (!fs.existsSync(configFile()) && fs.existsSync(legacy)) {
+    try { fs.mkdirSync(path.dirname(configFile()), { recursive: true }); fs.copyFileSync(legacy, configFile()); } catch { /* start fresh */ }
+  }
+  try { config = JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { config = {}; }
+}
+function saveConfig() {
+  fs.mkdirSync(path.dirname(configFile()), { recursive: true });
+  fs.writeFileSync(configFile(), JSON.stringify(config, null, 2));
+}
+// Installs from before the rename (~/.local/share/punchout-pc) stay where they are.
+const LEGACY_DATA_ROOT = path.join(os.homedir(), '.local', 'share', 'punchout-pc');
+const DEFAULT_DATA_ROOT = IS_WIN
+  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Fist-In')
+  : path.join(os.homedir(), '.local', 'share', 'fist-in');
+const dataRoot = () => config.dataRoot ||
+  (!fs.existsSync(DEFAULT_DATA_ROOT) && fs.existsSync(LEGACY_DATA_ROOT) ? LEGACY_DATA_ROOT : DEFAULT_DATA_ROOT);
+const paths = () => {
+  const root = dataRoot();
+  return {
+    root,
+    tools: path.join(root, 'tools'),
+    disc: config.discFolder || path.join(root, 'disc', 'DATA'),
+    work: path.join(root, 'work'),
+    port: path.join(root, 'port'),
+    logs: path.join(root, 'logs'),
+    gameConfig: path.join(root, 'port', 'UserData', 'Config.toml')
+  };
+};
+// The port's own files (the WiiCompiled patch and the Punch-Out project): bundled with the launcher, or a folder
+// chosen in Settings (for development: the recomp_wip folder).
+function portSource() {
+  const candidates = [config.portSource, process.env.PUNCHOUT_PORT_SOURCE,
+    path.join(process.resourcesPath || '', 'port-source'), path.join(__dirname, '..', 'port-source'),
+    // The repository layout (launcher/ next to port/), and the development one (next to recomp_wip).
+    path.join(__dirname, '..', '..', 'port'), path.join(__dirname, '..', '..', 'recomp_wip')];
+  return candidates.find(dir => dir && fs.existsSync(path.join(dir, 'punchout_region.patch'))) || null;
+}
+function buildScript() {
+  const name = IS_WIN ? 'build_port.ps1' : 'build_port.sh';
+  const packaged = path.join(process.resourcesPath || '', 'scripts', name);
+  return fs.existsSync(packaged) ? packaged : path.join(__dirname, '..', 'scripts', name);
+}
+// Windows: the portable tools the launcher downloads itself.
+const winTools = () => {
+  const t = paths().tools;
+  return { git: path.join(t, 'git', 'cmd', 'git.exe'), dotnet: path.join(t, 'dotnet', 'dotnet.exe'), dotnetDir: path.join(t, 'dotnet') };
+};
+
+// ---------------------------------------------------------------------------------------------------------------
+// Helpers
+
+function send(channel, payload) {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+function log(line) {
+  logLines.push(line);
+  if (logLines.length > 4000) logLines.splice(0, logLines.length - 4000);
+  send('log', line);
+}
+function setTask(next) {
+  task = next;
+  send('task', task);
+}
+function run(cmd, args, opts = {}) {
+  return new Promise(resolve => {
+    execFile(cmd, args, { timeout: opts.timeout || 20000, maxBuffer: 16 * 1024 * 1024, ...opts }, (error, stdout, stderr) =>
+      resolve({ ok: !error, stdout: String(stdout || ''), stderr: String(stderr || ''), error }));
+  });
+}
+async function md5(file) {
+  const hash = crypto.createHash('md5');
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+}
+async function sha256(file) {
+  const hash = crypto.createHash('sha256');
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+}
+function download(url, dest, onProgress = null, redirects = 5) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'fist-in-launcher' } }, res => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+        res.resume();
+        resolve(download(new URL(res.headers.location, url).toString(), dest, onProgress, redirects - 1));
+        return;
+      }
+      if (res.statusCode !== 200) { res.resume(); reject(new Error(`download failed (HTTP ${res.statusCode})`)); return; }
+      const total = Number(res.headers['content-length']) || 0;
+      let got = 0;
+      if (onProgress) res.on('data', chunk => { got += chunk.length; onProgress(got, total); });
+      const out = fs.createWriteStream(dest);
+      res.pipe(out);
+      out.on('finish', () => out.close(resolve));
+      out.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Build tools
+
+function distroInstallHint(missing) {
+  let id = '';
+  try { id = fs.readFileSync('/etc/os-release', 'utf8'); } catch { /* unknown */ }
+  const like = (/^ID(?:_LIKE)?=(.*)$/gm.exec(id) || [])[1] || '';
+  const all = id + ' ' + like;
+  const pkgs = {
+    apt: { git: 'git', dotnet: 'dotnet-sdk-8.0', cmake: 'cmake', ninja: 'ninja-build', clang: 'clang', 'clang++': 'clang' },
+    dnf: { git: 'git', dotnet: 'dotnet-sdk-8.0', cmake: 'cmake', ninja: 'ninja-build', clang: 'clang', 'clang++': 'clang' },
+    pacman: { git: 'git', dotnet: 'dotnet-sdk', cmake: 'cmake', ninja: 'ninja', clang: 'clang', 'clang++': 'clang' }
+  };
+  const manager = /arch|manjaro|endeavour|cachyos/i.test(all) ? 'pacman' : /fedora|rhel|centos|nobara|bazzite/i.test(all) ? 'dnf' : /debian|ubuntu|mint|pop|zorin|elementary/i.test(all) ? 'apt' : null;
+  if (!manager) return null;
+  const names = [...new Set(missing.map(t => pkgs[manager][t]))];
+  return manager === 'pacman' ? `sudo pacman -S --needed ${names.join(' ')}`
+    : manager === 'dnf' ? `sudo dnf install ${names.join(' ')}` : `sudo apt install ${names.join(' ')}`;
+}
+
+async function checkTools(force = false) {
+  if (toolsCache && !force) return toolsCache;
+  if (IS_WIN) return (toolsCache = await checkWindowsTools());
+  const results = [];
+  for (const tool of TOOLS) {
+    const r = await run(tool.name, tool.args, { timeout: 10000 });
+    const ok = r.ok && (!tool.check || tool.check(r.stdout));
+    results.push({ name: tool.name, ok, need: tool.need || tool.name });
+  }
+  const missing = results.filter(r => !r.ok).map(r => r.name);
+  toolsCache = { ok: missing.length === 0, results, missing, hint: missing.length ? distroInstallHint(missing) : null };
+  return toolsCache;
+}
+
+// ---- Windows: the launcher's own tools ----
+
+async function hashFile(file, algorithm) {
+  const hash = crypto.createHash(algorithm);
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+}
+const VC_RUNTIME_DLLS = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'];
+async function checkWindowsTools() {
+  const t = winTools();
+  const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  let dotnetOk = false;
+  if (fs.existsSync(t.dotnet)) {
+    const r = await run(t.dotnet, ['--list-sdks'], { timeout: 20000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
+    dotnetOk = r.ok && /^8\./m.test(r.stdout);
+  }
+  const results = [
+    { name: 'git', ok: fs.existsSync(t.git), need: 'Git' },
+    { name: 'dotnet', ok: dotnetOk, need: '.NET 8 SDK' },
+    { name: 'vcruntime', ok: VC_RUNTIME_DLLS.every(d => fs.existsSync(path.join(sys32, d))), need: 'Visual C++ runtime' }
+  ];
+  const missing = results.filter(r => !r.ok).map(r => r.name);
+  return { ok: missing.length === 0, results, missing, hint: null, managed: true };
+}
+
+function percentOf(got, total) { return total ? Math.round((got / total) * 100) : null; }
+const mb = n => `${Math.round(n / 1048576)} MB`;
+async function unzip(archive, dest) {
+  // tar.exe (bsdtar) ships with Windows 10 and later and reads zip files.
+  await fsp.rm(dest, { recursive: true, force: true });
+  await fsp.mkdir(dest, { recursive: true });
+  const r = await run(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe'), ['-xf', archive, '-C', dest], { timeout: 15 * 60000 });
+  if (!r.ok) throw new Error(`Couldn't unpack ${path.basename(archive)}: ${r.stderr.trim() || r.error?.message}`);
+}
+async function fetchJson(url) {
+  const file = path.join(os.tmpdir(), `fist-in-${process.pid}-${Date.now()}.json`);
+  try { await download(url, file); return JSON.parse(await fsp.readFile(file, 'utf8')); } finally { await fsp.rm(file, { force: true }); }
+}
+
+async function installWindowsTools() {
+  const p = paths();
+  const t = winTools();
+  const status = await checkWindowsTools();
+  await fsp.mkdir(p.tools, { recursive: true });
+  if (!status.results.find(r => r.name === 'git').ok) {
+    const zip = path.join(p.tools, `MinGit-${MINGIT.version}.zip`);
+    await download(MINGIT.url, zip, (got, total) => setTask({ label: 'Downloading Git', detail: mb(got), percent: percentOf(got, total) }));
+    if (await hashFile(zip, 'sha256') !== MINGIT.sha256) { await fsp.rm(zip, { force: true }); throw new Error('The Git download failed its checksum.'); }
+    setTask({ label: 'Unpacking Git', detail: '', percent: null });
+    await unzip(zip, path.join(p.tools, 'git'));
+    await fsp.rm(zip, { force: true });
+  }
+  if (!status.results.find(r => r.name === 'dotnet').ok) {
+    setTask({ label: 'Finding the .NET 8 SDK', detail: '', percent: null });
+    const releases = await fetchJson(DOTNET_RELEASES);
+    const file = (releases.releases || []).flatMap(r => (r.sdk && r.sdk.files) || [])
+      .find(f => f.rid === 'win-x64' && /\.zip$/.test(f.name || f.url || ''));
+    if (!file || !/^https:\/\//.test(file.url) || !file.hash) throw new Error("Couldn't find the .NET 8 SDK download.");
+    const zip = path.join(p.tools, 'dotnet-sdk.zip');
+    await download(file.url, zip, (got, total) => setTask({ label: 'Downloading .NET 8', detail: mb(got), percent: percentOf(got, total) }));
+    if (await hashFile(zip, 'sha512') !== String(file.hash).toLowerCase()) { await fsp.rm(zip, { force: true }); throw new Error('The .NET download failed its checksum.'); }
+    setTask({ label: 'Unpacking .NET 8', detail: 'About a minute', percent: null });
+    await unzip(zip, t.dotnetDir);
+    await fsp.rm(zip, { force: true });
+  }
+  if (!status.results.find(r => r.name === 'vcruntime').ok) {
+    // Microsoft's own installer (the game's renderer DLLs need it). Windows asks for permission to install it.
+    const exe = path.join(p.tools, 'vc_redist.x64.exe');
+    await download(VC_REDIST, exe, (got, total) => setTask({ label: 'Downloading the Visual C++ runtime', detail: mb(got), percent: percentOf(got, total) }));
+    const sig = await run('powershell.exe', ['-NoProfile', '-Command',
+      `$s = Get-AuthenticodeSignature -LiteralPath '${exe.replace(/'/g, "''")}'; "$($s.Status)|$($s.SignerCertificate.Subject)"`], { timeout: 60000 });
+    if (!/^Valid\|.*O=Microsoft Corporation/m.test(sig.stdout)) { await fsp.rm(exe, { force: true }); throw new Error("The Visual C++ runtime download isn't signed by Microsoft."); }
+    setTask({ label: 'Installing the Visual C++ runtime', detail: 'Allow it in the Windows prompt', percent: null });
+    // Start-Process -Verb RunAs: the installer needs administrator rights, which a plain spawn can't ask for.
+    await run('powershell.exe', ['-NoProfile', '-Command',
+      `Start-Process -FilePath '${exe.replace(/'/g, "''")}' -ArgumentList '/install','/passive','/norestart' -Verb RunAs -Wait`], { timeout: 10 * 60000 });
+    await fsp.rm(exe, { force: true });
+  }
+  return checkTools(true);
+}
+
+async function nodtool() {
+  const key = `${process.platform}-${process.arch}`;
+  const entry = NODTOOL[key];
+  if (!entry) throw new Error(`No disc tool for ${key} yet.`);
+  const p = paths();
+  const file = path.join(p.tools, `nodtool-${NODTOOL.version}${EXE}`);
+  if (fs.existsSync(file) && await sha256(file) === entry.sha256) return file;
+  await fsp.mkdir(p.tools, { recursive: true });
+  setTask({ label: 'Getting the disc tool', detail: 'nodtool ' + NODTOOL.version, percent: null });
+  const tmp = file + '.part';
+  await download(`https://github.com/encounter/nod/releases/download/${NODTOOL.version}/${entry.asset}`, tmp);
+  if (await sha256(tmp) !== entry.sha256) { await fsp.rm(tmp, { force: true }); throw new Error('The downloaded disc tool failed its checksum.'); }
+  if (!IS_WIN) await fsp.chmod(tmp, 0o755);
+  await fsp.rename(tmp, file);
+  return file;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Disc
+
+async function describeDisc(file) {
+  const tool = await nodtool();
+  const r = await run(tool, ['--no-color', 'info', file], { timeout: 60000 });
+  const out = r.stdout + r.stderr;
+  const id = (/^Game ID: (\S+)/m.exec(out) || [])[1];
+  const title = (/^Title: (.+)$/m.exec(out) || [])[1] || '';
+  const rev = Number((/^Disc \d+, Revision (\d+)/m.exec(out) || [])[1] || 0);
+  if (!id) return { ok: false, problem: "That file doesn't look like a Wii disc image." };
+  if (id !== GAME_ID) return { ok: false, id, title, problem: `That's ${title || id} (${id}). The launcher needs Punch-Out!! for the USA (${GAME_ID}).` };
+  return { ok: true, id, title, rev };
+}
+
+async function discExtracted() {
+  const p = paths();
+  if (config.discFolder) return config.discFolderOk === true && fs.existsSync(path.join(config.discFolder, 'sys', 'main.dol'));
+  const marker = path.join(p.disc, '..', 'extracted.json');
+  try {
+    const info = JSON.parse(fs.readFileSync(marker, 'utf8'));
+    return info.mainDolMd5 === MAIN_DOL_MD5 && fs.existsSync(path.join(p.disc, 'sys', 'main.dol'));
+  } catch { return false; }
+}
+
+async function extractDisc() {
+  const p = paths();
+  if (!config.disc) throw new Error('Choose your Punch-Out!! disc first.');
+  const info = await describeDisc(config.disc);
+  if (!info.ok) throw new Error(info.problem);
+  const tool = await nodtool();
+  await fsp.rm(p.disc, { recursive: true, force: true });
+  await fsp.mkdir(path.dirname(p.disc), { recursive: true });
+  setTask({ label: 'Extracting your disc', detail: 'This takes a minute or two', percent: null });
+  await spawnLogged(tool, ['--no-color', 'extract', config.disc, p.disc], {}, line => {
+    const m = /(\d+(?:\.\d+)?)%/.exec(line);
+    if (m) setTask({ label: 'Extracting your disc', detail: line.trim().slice(0, 80), percent: Number(m[1]) });
+  });
+  const dol = path.join(p.disc, 'sys', 'main.dol');
+  if (!fs.existsSync(dol)) throw new Error('The disc extracted, but its game code (sys/main.dol) is missing.');
+  const sum = await md5(dol);
+  if (sum !== MAIN_DOL_MD5) throw new Error(`This Punch-Out!! disc is a revision the port doesn't support yet (main.dol ${sum}).`);
+  await fsp.writeFile(path.join(p.disc, '..', 'extracted.json'), JSON.stringify({ from: config.disc, mainDolMd5: sum, at: new Date().toISOString() }, null, 2));
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Building and playing
+
+function spawnLogged(cmd, args, opts, onLine) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = proc;
+    let tail = '';
+    const handle = chunk => {
+      tail += chunk.toString();
+      const lines = tail.split(/\r?\n|\r/);
+      tail = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        log(line);
+        if (onLine) onLine(line);
+      }
+    };
+    proc.stdout.on('data', handle);
+    proc.stderr.on('data', handle);
+    proc.on('error', err => { child = null; reject(err); });
+    proc.on('close', (code, signal) => {
+      child = null;
+      if (tail.trim()) log(tail);
+      if (code === 0) resolve();
+      else reject(new Error(signal ? `stopped (${signal})` : `exited with code ${code}`));
+    });
+  });
+}
+
+// Stops the build or game. On Windows, killing PowerShell would leave CMake, Ninja and clang running, so the whole
+// process tree goes.
+function stopChild() {
+  if (!child) return;
+  if (IS_WIN && child.pid) execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], () => {});
+  else child.kill('SIGINT');
+}
+
+function buildInfoFile() { return path.join(paths().port, 'launcher-build.json'); }
+async function portSourceHash() {
+  const src = portSource();
+  return src ? (await sha256(path.join(src, 'punchout_region.patch'))).slice(0, 16) : null;
+}
+async function buildState() {
+  const p = paths();
+  const binary = path.join(p.port, 'FistIn' + EXE);
+  let info = null;
+  try { info = JSON.parse(fs.readFileSync(buildInfoFile(), 'utf8')); } catch { /* not built */ }
+  const built = fs.existsSync(binary) && info != null;
+  const current = await portSourceHash();
+  return { built, binary, info, outdated: built && current && info.patch !== current };
+}
+
+async function build() {
+  const p = paths();
+  const src = portSource();
+  if (!src) throw new Error("The port's files weren't found. Choose them in Settings > Advanced.");
+  const tools = await checkTools(true);
+  if (!tools.ok) throw new Error(`Missing build tools: ${tools.missing.join(', ')}.`);
+  if (!await discExtracted()) await extractDisc();
+  await fsp.mkdir(p.logs, { recursive: true });
+  const steps = { total: 7, at: 0 };
+  setTask({ label: 'Building Fist-In!!', detail: 'Starting', percent: 0 });
+  const env = { ...process.env, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.disc, PO_PORT: p.port, PO_LOGS: p.logs, NINJA_STATUS: '[%f/%t] ' };
+  let cmd = 'bash', args = [buildScript()], buildLog = null;
+  if (IS_WIN) {
+    // build_port.sh writes its own build.log; on Windows the launcher keeps it.
+    const t = winTools();
+    Object.assign(env, { PO_GIT: t.git, PO_DOTNET: t.dotnet });
+    cmd = 'powershell.exe';
+    args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', buildScript()];
+    buildLog = fs.createWriteStream(path.join(p.logs, 'build.log'));
+  }
+  try {
+  await spawnLogged(cmd, args, { env, windowsHide: true }, line => {
+    if (buildLog) buildLog.write(line + '\n');
+    const step = /^@@STEP (\d+)\/(\d+) (.*)$/.exec(line);
+    if (step) {
+      steps.at = Number(step[1]); steps.total = Number(step[2]);
+      setTask({ label: 'Building Fist-In!!', detail: step[3], percent: Math.round(((steps.at - 1) / steps.total) * 100) });
+      return;
+    }
+    const ninja = /^\[(\d+)\/(\d+)\]/.exec(line);
+    if (ninja && steps.at > 0) {
+      const frac = Number(ninja[1]) / Math.max(1, Number(ninja[2]));
+      setTask({ label: 'Building Fist-In!!', detail: `Compiling ${ninja[1]} of ${ninja[2]}`, percent: Math.round(((steps.at - 1 + frac) / steps.total) * 100) });
+    }
+  });
+  } finally {
+    if (buildLog) buildLog.end();
+  }
+  await fsp.writeFile(buildInfoFile(), JSON.stringify({ patch: await portSourceHash(), at: new Date().toISOString(), source: src }, null, 2));
+}
+
+// Linux desktops (GNOME on Wayland in particular) take a window's taskbar icon and name from the desktop entry whose
+// name matches the window's app ID. The game's is "fist-in", so this hidden entry (NoDisplay: not in the app menu)
+// gives its window the glove and "Fist-In!!". Rewritten on each launch so it follows the install folder.
+function writeGameDesktopEntry(binary) {
+  if (process.platform !== 'linux') return;
+  try {
+    const dir = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'applications');
+    const icon = path.join(path.dirname(binary), 'assets', 'punchout', 'icon.png');
+    const quote = s => '"' + s.replace(/(["`$\\])/g, '\\$1') + '"';
+    const text = ['[Desktop Entry]', 'Type=Application', 'Name=Fist-In!!', 'Comment=Punch-Out!! (Wii) on PC',
+      `Exec=${quote(binary)}`, `Path=${path.dirname(binary)}`, `Icon=${fs.existsSync(icon) ? icon : 'applications-games'}`,
+      'StartupWMClass=fist-in', 'Categories=Game;', 'NoDisplay=true', ''].join('\n');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'fist-in.desktop'), text);
+    fs.rmSync(path.join(dir, 'punchout-pc.desktop'), { force: true }); // from before the rename
+  } catch (err) {
+    log(`Couldn't write the game's desktop entry: ${err.message}`);
+  }
+}
+
+async function play() {
+  const state = await buildState();
+  if (!state.built) throw new Error('Build the port first.');
+  const p = paths();
+  ensureGameConfig();
+  writeGameDesktopEntry(state.binary);
+  gameRunning = true;
+  send('state-changed');
+  const logFile = path.join(p.logs, 'game.log');
+  await fsp.mkdir(p.logs, { recursive: true });
+  const out = fs.createWriteStream(logFile);
+  setTask({ label: 'Playing Fist-In!!', detail: 'Close the game to come back here', percent: null });
+  const watcher = setInterval(() => send('state-changed'), 2000); // the Archipelago checkmark follows the game
+  try {
+    await spawnLogged(state.binary, [], { cwd: p.port, windowsHide: false }, line => out.write(line + '\n'));
+  } finally {
+    clearInterval(watcher);
+    out.end();
+    gameRunning = false;
+    send('state-changed');
+  }
+}
+
+// The values WiiCompiled accepts (IsSupportedResolutionMultiplier / IsSupportedDisplayMode).
+const GRAPHICS_RESOLUTIONS = [0, 1, 1.5, 2, 3, 4, 6, 8];
+const GRAPHICS_DISPLAY_MODES = ['windowed', 'borderless', 'exclusive'];
+
+// The game reads its settings and disc location from port/UserData/Config.toml.
+function ensureGameConfig() {
+  const p = paths();
+  fs.mkdirSync(path.dirname(p.gameConfig), { recursive: true });
+  let text = '';
+  try { text = fs.readFileSync(p.gameConfig, 'utf8'); } catch { /* new */ }
+  text = toml.set(text, 'paths', 'dvd_root', p.disc);
+  fs.writeFileSync(p.gameConfig, text);
+}
+
+function readGameSettings() {
+  let text = '';
+  try { text = fs.readFileSync(paths().gameConfig, 'utf8'); } catch { /* none yet */ }
+  const get = (section, key, fallback) => {
+    const v = toml.get(text, section, key);
+    return v === undefined ? fallback : v;
+  };
+  return {
+    difficulty: get('punchout', 'difficulty', 'normal'),
+    buttonStyle: get('punchout', 'button_style', 'auto'),
+    skipStrapScreen: get('punchout', 'skip_strap_screen', true),
+    // Same keys and defaults as WiiCompiled's F10 Graphics menu (runtime_config.h).
+    graphics: {
+      widescreen: get('video', 'widescreen', true) !== false,
+      forceAspect: get('video', 'force_aspect', false) === true,
+      resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
+      displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
+    },
+    archipelago: {
+      enabled: get('archipelago', 'enabled', false),
+      server: get('archipelago', 'server', 'archipelago.gg:38281'),
+      slot: get('archipelago', 'slot', ''),
+      password: get('archipelago', 'password', ''),
+      patchFile: get('archipelago', 'patch_file', ''),
+      showLog: get('archipelago', 'show_log', true),
+      connected: get('archipelago', 'connected', false)
+    }
+  };
+}
+
+function writeGameSettings(s) {
+  ensureGameConfig();
+  const file = paths().gameConfig;
+  let text = fs.readFileSync(file, 'utf8');
+  if (s.difficulty) text = toml.set(text, 'punchout', 'difficulty', s.difficulty);
+  if (s.buttonStyle) text = toml.set(text, 'punchout', 'button_style', s.buttonStyle);
+  if (typeof s.skipStrapScreen === 'boolean') text = toml.set(text, 'punchout', 'skip_strap_screen', s.skipStrapScreen);
+  const g = s.graphics;
+  if (g) {
+    if (typeof g.widescreen === 'boolean') text = toml.set(text, 'video', 'widescreen', g.widescreen);
+    if (typeof g.forceAspect === 'boolean') text = toml.set(text, 'video', 'force_aspect', g.forceAspect);
+    if (GRAPHICS_RESOLUTIONS.includes(g.resolution)) text = toml.set(text, 'video', 'resolution_multiplier', g.resolution);
+    if (GRAPHICS_DISPLAY_MODES.includes(g.displayMode)) text = toml.set(text, 'video', 'display_mode', g.displayMode);
+  }
+  const ap = s.archipelago;
+  if (ap) {
+    for (const [key, value] of [['enabled', ap.enabled], ['server', ap.server], ['slot', ap.slot], ['password', ap.password],
+      ['patch_file', ap.patchFile], ['show_log', ap.showLog]]) {
+      if (value !== undefined) text = toml.set(text, 'archipelago', key, value);
+    }
+    // Turning Archipelago off clears the checkmark until the game logs in again.
+    if (ap.enabled === false) text = toml.set(text, 'archipelago', 'connected', false);
+  }
+  fs.writeFileSync(file, text);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// State for the renderer
+
+async function state() {
+  const tools = await checkTools();
+  const extracted = await discExtracted();
+  const b = await buildState();
+  const step = !tools.ok ? 1 : !(config.disc || extracted) ? 2 : !b.built ? 3 : 0;
+  return {
+    step, tools, extracted,
+    disc: config.disc || config.discFolder || null,
+    build: { built: b.built, outdated: Boolean(b.outdated), at: b.info?.at || null },
+    portSource: portSource(),
+    dataRoot: dataRoot(),
+    running: gameRunning, busy: Boolean(child) && !gameRunning,
+    task, settings: readGameSettings(), version: app.getVersion(),
+    logs: logLines.slice(-400)
+  };
+}
+
+function exclusive(fn) {
+  return async (...args) => {
+    if (child) throw new Error('Something is already running.');
+    try { return await fn(...args); } finally { setTask(null); send('state-changed'); }
+  };
+}
+
+function registerHandlers() {
+  ipcMain.handle('state', () => state());
+  ipcMain.handle('check-tools', async () => { await checkTools(true); return state(); });
+  ipcMain.handle('install-tools', exclusive(async () => { if (IS_WIN) await installWindowsTools(); }));
+  ipcMain.handle('choose-disc', async () => {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose your Punch-Out!! disc', properties: ['openFile'],
+      filters: [{ name: 'Wii disc images', extensions: ['iso', 'wbfs', 'rvz', 'ciso', 'gcz', 'wia', 'nfs'] }, { name: 'All files', extensions: ['*'] }]
+    });
+    if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
+    setTask({ label: 'Checking your disc', detail: path.basename(r.filePaths[0]), percent: null });
+    try {
+      const info = await describeDisc(r.filePaths[0]);
+      if (info.ok) { config.disc = r.filePaths[0]; delete config.discFolder; delete config.discFolderOk; saveConfig(); }
+      return info;
+    } finally { setTask(null); send('state-changed'); }
+  });
+  // An already extracted disc (a folder with sys/main.dol and files/), e.g. from Dolphin: used where it is.
+  ipcMain.handle('choose-disc-folder', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose your extracted Punch-Out!! disc', properties: ['openDirectory'] });
+    if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
+    let dir = r.filePaths[0];
+    if (!fs.existsSync(path.join(dir, 'sys', 'main.dol')) && fs.existsSync(path.join(dir, 'DATA', 'sys', 'main.dol'))) dir = path.join(dir, 'DATA');
+    const dol = path.join(dir, 'sys', 'main.dol');
+    if (!fs.existsSync(dol)) return { ok: false, problem: "That folder isn't an extracted disc (no sys/main.dol in it)." };
+    const sum = await md5(dol);
+    if (sum !== MAIN_DOL_MD5) return { ok: false, problem: "That's not the supported Punch-Out!! (USA) game code." };
+    config.discFolder = dir;
+    config.discFolderOk = true;
+    delete config.disc;
+    saveConfig();
+    send('state-changed');
+    return { ok: true };
+  });
+  ipcMain.handle('choose-folder', async (_e, which) => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    if (which === 'dataRoot') config.dataRoot = r.filePaths[0];
+    if (which === 'portSource') config.portSource = r.filePaths[0];
+    saveConfig();
+    send('state-changed');
+    return r.filePaths[0];
+  });
+  ipcMain.handle('choose-patch-file', async () => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Archipelago patch', extensions: ['appunchout'] }] });
+    return r.canceled ? null : r.filePaths[0];
+  });
+  ipcMain.handle('build', exclusive(build));
+  ipcMain.handle('play', exclusive(play));
+  ipcMain.handle('stop', () => stopChild());
+  ipcMain.handle('save-settings', (_e, s) => { writeGameSettings(s); return readGameSettings(); });
+  ipcMain.handle('open-folder', (_e, which) => {
+    const p = paths();
+    const dir = { logs: p.logs, port: p.port, data: p.root }[which] || p.root;
+    fs.mkdirSync(dir, { recursive: true });
+    return shell.openPath(dir);
+  });
+  ipcMain.handle('open-external', (_e, url) => {
+    if (/^https:\/\//.test(url)) return shell.openExternal(url);
+  });
+  ipcMain.handle('copy-log', () => { clipboard.writeText(logLines.join('\n')); return true; });
+  ipcMain.handle('copy-text', (_e, text) => { clipboard.writeText(String(text)); return true; });
+  ipcMain.handle('window', (_e, action) => {
+    if (!win) return null;
+    if (action === 'minimize') win.minimize();
+    if (action === 'fullscreen') win.setFullScreen(!win.isFullScreen());
+    if (action === 'close') win.close();
+    return { fullScreen: win.isFullScreen() };
+  });
+}
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1080, height: 760, minWidth: 860, minHeight: 600, frame: false, backgroundColor: '#14121f',
+    title: 'Fist-In!! Launcher', show: false, icon: path.join(__dirname, 'assets', 'logo.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false }
+  });
+  win.loadFile(path.join(__dirname, 'index.html'));
+  win.once('ready-to-show', () => win.show());
+  // Development: PUNCHOUT_SCREENSHOTS=<folder> saves a picture of every page, then quits.
+  if (process.env.PUNCHOUT_SCREENSHOTS) {
+    win.webContents.once('did-finish-load', async () => {
+      const dir = process.env.PUNCHOUT_SCREENSHOTS;
+      fs.mkdirSync(dir, { recursive: true });
+      for (const pageName of ['play', 'archipelago', 'controls', 'settings', 'credits']) {
+        await win.webContents.executeJavaScript(`document.getElementById('nav-${pageName}').click()`);
+        await new Promise(r => setTimeout(r, 1200));
+        fs.writeFileSync(path.join(dir, `${pageName}.png`), (await win.webContents.capturePage()).toPNG());
+      }
+      app.quit();
+    });
+  }
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+}
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+  app.whenReady().then(() => {
+    loadConfig();
+    registerHandlers();
+    createWindow();
+  });
+  app.on('window-all-closed', () => { stopChild(); app.quit(); });
+}
