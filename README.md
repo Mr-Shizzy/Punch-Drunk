@@ -1,3 +1,5 @@
+#100% coded with AI. Extensive testing by me.
+
 # Fist-In!!
 
 ### A Punch-Out!! (Wii, 2009) PC recompilation
