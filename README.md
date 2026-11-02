@@ -55,7 +55,7 @@ Windows, where the compiler is downloaded too), and 64-bit Linux or Windows 10/1
 - Graphics: any render resolution, 16:9 or 4:3, windowed or fullscreen (launcher Settings, or F10 in the game).
 - Difficulty modes: Hard (no restarting or quitting mid-fight) and Insane (one knockdown and you're out).
 - Archipelago: connect from the launcher or in the game (F10). Items, traps, death link and the in-game message panel
-  are built in; no separate client needed. Generate with the Punch-Out Wii apworld (released separately), version
+  are built in; no separate client needed. Generate with the [Punch-Out Wii apworld](https://gitlab.com/fist-in/punchout-apworld), version
   1.6.1 or newer; older versions work too if you choose the seed's .appunchout file in the launcher's Archipelago page.
 
 ## What's in this repository
