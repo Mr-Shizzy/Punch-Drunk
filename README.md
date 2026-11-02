@@ -1,4 +1,4 @@
-#100% coded with AI. Extensive testing by me.
+100% coded with AI. Extensive testing by me.
 
 # Fist-In!!
 
