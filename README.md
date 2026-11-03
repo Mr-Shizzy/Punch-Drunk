@@ -1,11 +1,11 @@
 100% coded with AI. Extensive testing by me.
 
-# Fist-In!!
+# Re-Punched!!
 
 ### A Punch-Out!! (Wii, 2009) PC recompilation
 
 A fan-made PC port of **Punch-Out!!** (Wii, 2009), built with the [WiiCompiled](https://github.com/patchzyy/wiicompiled) static
-recompiler. Play with a controller, at any resolution, with built-in [Archipelago](https://archipelago.gg) multiworld
+recompiler. Play with a controller or the keyboard, at any resolution, with built-in [Archipelago](https://archipelago.gg) multiworld
 support.
 
 > **Not affiliated with or endorsed by Nintendo.** This is a non-commercial fan project. Punch-Out!! and Nintendo are
@@ -16,21 +16,21 @@ your computer from your own copy of Punch-Out!! (USA).
 
 ## Download
 
-Get the launcher from the [latest release](https://gitlab.com/fist-in/Fist-In/-/releases/permalink/latest):
+Get the launcher from the [latest release](https://gitlab.com/fist-in/Re-Punched/-/releases/permalink/latest):
 
 | Your computer | Download (all parts) | You get |
 | --- | --- | --- |
-| Linux (x86-64) | `Fist-In-Launcher.7z.001`, `Fist-In-Launcher.7z.002` | `Fist-In-Launcher.AppImage` |
-| Windows 10/11 (x64) | `Fist-In-Launcher-Setup.7z.001`, `Fist-In-Launcher-Setup.7z.002` | `Fist-In-Launcher-Setup.exe` |
+| Linux (x86-64) | `Re-Punched-Launcher.7z.001`, `Re-Punched-Launcher.7z.002` | `Re-Punched-Launcher.AppImage` |
+| Windows 10/11 (x64) | `Re-Punched-Launcher-Setup.7z.001`, `Re-Punched-Launcher-Setup.7z.002` | `Re-Punched-Launcher-Setup.exe` |
 
 **Each download comes in two parts**, because the release page limits each file to 100 MB. To put them back
 together:
 
 1. Download **both** parts for your system into the same folder.
 2. Extract the `.001` part. Your archive app reads the `.002` part by itself.
-   - Linux: open it with Ark, File Roller or PeaZip, or in a terminal run `7z x Fist-In-Launcher.7z.001` (from the
+   - Linux: open it with Ark, File Roller or PeaZip, or in a terminal run `7z x Re-Punched-Launcher.7z.001` (from the
      `7zip` or `p7zip` package).
-   - Windows: install [7-Zip](https://www.7-zip.org/), right-click `Fist-In-Launcher-Setup.7z.001` and choose
+   - Windows: install [7-Zip](https://www.7-zip.org/), right-click `Re-Punched-Launcher-Setup.7z.001` and choose
      **7-Zip → Extract Here**. Windows' built-in extractor can't join split archives.
 3. You get the launcher file shown in the table. You can delete the parts afterwards.
 
@@ -51,7 +51,10 @@ Windows, where the compiler is downloaded too), and 64-bit Linux or Windows 10/1
 
 ## Features
 
-- Controller support (Xbox and PlayStation button prompts), full D-pad menu navigation, keyboard and mouse.
+- Controller or keyboard: WASD or the arrows to move, J and K to punch, L or Space for the star punch, Enter to pause.
+  In menus, J chooses, K goes back, and Q and E turn pages (a controller's bumpers); the mouse works too (left click
+  chooses, right click goes back). Change any key or button on the launcher's Controls page or in the game (F10 →
+  Controller settings). The game's button prompts show your own keys or buttons, Xbox or PlayStation style.
 - Graphics: any render resolution, 16:9 or 4:3, windowed or fullscreen (launcher Settings, or F10 in the game).
 - Difficulty modes: Hard (no restarting or quitting mid-fight) and Insane (one knockdown and you're out).
 - Archipelago: connect from the launcher or in the game (F10). Items, traps, death link and the in-game message panel
@@ -74,4 +77,4 @@ WiiCompiled (GPL-3.0); SMS Launcher by Chase Myers (MIT), this launcher's starti
 (@ScissorMarks), CC BY 4.0; Open Sans (SIL OFL 1.1); nod by Luke Street (MIT/Apache-2.0); nlohmann/json (MIT);
 Archipelago.
 
-Punch-Out!! is © Nintendo. Fist-In!! is a fan project, not affiliated with or endorsed by Nintendo.
+Punch-Out!! is © Nintendo. Re-Punched!! is a fan project, not affiliated with or endorsed by Nintendo.

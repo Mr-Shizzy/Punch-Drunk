@@ -1,6 +1,6 @@
 'use strict';
 
-// Fist-In!! Launcher: main process. Sets up the port on the player's own computer from their own disc
+// Re-Punched!! Launcher: main process. Sets up the port on the player's own computer from their own disc
 // (checks the build tools, validates and extracts the disc with nodtool, builds the port with
 // scripts/build_port.sh, or scripts/build_port.ps1 on Windows), then launches it. Settings live in the port's own Config.toml, so the game's F10 menu and
 // the launcher always agree.
@@ -58,9 +58,10 @@ const logLines = [];
 
 const configFile = () => path.join(app.getPath('userData'), 'preferences.json');
 function loadConfig() {
-  // Preferences from before the rename ("Punch-Out PC Launcher") carry over once.
-  const legacy = path.join(app.getPath('appData'), 'Punch-Out PC Launcher', 'preferences.json');
-  if (!fs.existsSync(configFile()) && fs.existsSync(legacy)) {
+  // Preferences from before the renames ("Fist-In Launcher", "Punch-Out PC Launcher") carry over once.
+  const legacy = ['Fist-In Launcher', 'Punch-Out PC Launcher']
+    .map(name => path.join(app.getPath('appData'), name, 'preferences.json')).find(file => fs.existsSync(file));
+  if (!fs.existsSync(configFile()) && legacy) {
     try { fs.mkdirSync(path.dirname(configFile()), { recursive: true }); fs.copyFileSync(legacy, configFile()); } catch { /* start fresh */ }
   }
   try { config = JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { config = {}; }
@@ -69,13 +70,14 @@ function saveConfig() {
   fs.mkdirSync(path.dirname(configFile()), { recursive: true });
   fs.writeFileSync(configFile(), JSON.stringify(config, null, 2));
 }
-// Installs from before the rename (~/.local/share/punchout-pc) stay where they are.
-const LEGACY_DATA_ROOT = path.join(os.homedir(), '.local', 'share', 'punchout-pc');
-const DEFAULT_DATA_ROOT = IS_WIN
-  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Fist-In')
-  : path.join(os.homedir(), '.local', 'share', 'fist-in');
-const dataRoot = () => config.dataRoot ||
-  (!fs.existsSync(DEFAULT_DATA_ROOT) && fs.existsSync(LEGACY_DATA_ROOT) ? LEGACY_DATA_ROOT : DEFAULT_DATA_ROOT);
+// Installs from before the renames (Fist-In, punchout-pc) stay where they are: their build folders hold absolute
+// paths, so moving them would mean building from scratch.
+const LOCAL_DATA = IS_WIN ? (process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'))
+  : path.join(os.homedir(), '.local', 'share');
+const DEFAULT_DATA_ROOT = path.join(LOCAL_DATA, IS_WIN ? 'Re-Punched' : 're-punched');
+const LEGACY_DATA_ROOTS = [path.join(LOCAL_DATA, IS_WIN ? 'Fist-In' : 'fist-in'), path.join(os.homedir(), '.local', 'share', 'punchout-pc')];
+const dataRoot = () => config.dataRoot || (fs.existsSync(DEFAULT_DATA_ROOT) ? DEFAULT_DATA_ROOT
+  : LEGACY_DATA_ROOTS.find(dir => fs.existsSync(dir)) || DEFAULT_DATA_ROOT);
 const paths = () => {
   const root = dataRoot();
   return {
@@ -141,7 +143,7 @@ async function sha256(file) {
 }
 function download(url, dest, onProgress = null, redirects = 5) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'fist-in-launcher' } }, res => {
+    https.get(url, { headers: { 'User-Agent': 're-punched-launcher' } }, res => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
         resolve(download(new URL(res.headers.location, url).toString(), dest, onProgress, redirects - 1));
@@ -228,7 +230,7 @@ async function unzip(archive, dest) {
   if (!r.ok) throw new Error(`Couldn't unpack ${path.basename(archive)}: ${r.stderr.trim() || r.error?.message}`);
 }
 async function fetchJson(url) {
-  const file = path.join(os.tmpdir(), `fist-in-${process.pid}-${Date.now()}.json`);
+  const file = path.join(os.tmpdir(), `re-punched-${process.pid}-${Date.now()}.json`);
   try { await download(url, file); return JSON.parse(await fsp.readFile(file, 'utf8')); } finally { await fsp.rm(file, { force: true }); }
 }
 
@@ -381,7 +383,7 @@ async function portSourceHash() {
 }
 async function buildState() {
   const p = paths();
-  const binary = path.join(p.port, 'FistIn' + EXE);
+  const binary = path.join(p.port, 'RePunched' + EXE);
   let info = null;
   try { info = JSON.parse(fs.readFileSync(buildInfoFile(), 'utf8')); } catch { /* not built */ }
   const built = fs.existsSync(binary) && info != null;
@@ -398,7 +400,7 @@ async function build() {
   if (!await discExtracted()) await extractDisc();
   await fsp.mkdir(p.logs, { recursive: true });
   const steps = { total: 7, at: 0 };
-  setTask({ label: 'Building Fist-In!!', detail: 'Starting', percent: 0 });
+  setTask({ label: 'Building Re-Punched!!', detail: 'Starting', percent: 0 });
   const env = { ...process.env, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.disc, PO_PORT: p.port, PO_LOGS: p.logs, NINJA_STATUS: '[%f/%t] ' };
   let cmd = 'bash', args = [buildScript()], buildLog = null;
   if (IS_WIN) {
@@ -415,13 +417,13 @@ async function build() {
     const step = /^@@STEP (\d+)\/(\d+) (.*)$/.exec(line);
     if (step) {
       steps.at = Number(step[1]); steps.total = Number(step[2]);
-      setTask({ label: 'Building Fist-In!!', detail: step[3], percent: Math.round(((steps.at - 1) / steps.total) * 100) });
+      setTask({ label: 'Building Re-Punched!!', detail: step[3], percent: Math.round(((steps.at - 1) / steps.total) * 100) });
       return;
     }
     const ninja = /^\[(\d+)\/(\d+)\]/.exec(line);
     if (ninja && steps.at > 0) {
       const frac = Number(ninja[1]) / Math.max(1, Number(ninja[2]));
-      setTask({ label: 'Building Fist-In!!', detail: `Compiling ${ninja[1]} of ${ninja[2]}`, percent: Math.round(((steps.at - 1 + frac) / steps.total) * 100) });
+      setTask({ label: 'Building Re-Punched!!', detail: `Compiling ${ninja[1]} of ${ninja[2]}`, percent: Math.round(((steps.at - 1 + frac) / steps.total) * 100) });
     }
   });
   } finally {
@@ -431,20 +433,20 @@ async function build() {
 }
 
 // Linux desktops (GNOME on Wayland in particular) take a window's taskbar icon and name from the desktop entry whose
-// name matches the window's app ID. The game's is "fist-in", so this hidden entry (NoDisplay: not in the app menu)
-// gives its window the glove and "Fist-In!!". Rewritten on each launch so it follows the install folder.
+// name matches the window's app ID. The game's is "re-punched", so this hidden entry (NoDisplay: not in the app menu)
+// gives its window the glove and "Re-Punched!!". Rewritten on each launch so it follows the install folder.
 function writeGameDesktopEntry(binary) {
   if (process.platform !== 'linux') return;
   try {
     const dir = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'applications');
     const icon = path.join(path.dirname(binary), 'assets', 'punchout', 'icon.png');
     const quote = s => '"' + s.replace(/(["`$\\])/g, '\\$1') + '"';
-    const text = ['[Desktop Entry]', 'Type=Application', 'Name=Fist-In!!', 'Comment=Punch-Out!! (Wii) on PC',
+    const text = ['[Desktop Entry]', 'Type=Application', 'Name=Re-Punched!!', 'Comment=Punch-Out!! (Wii) on PC',
       `Exec=${quote(binary)}`, `Path=${path.dirname(binary)}`, `Icon=${fs.existsSync(icon) ? icon : 'applications-games'}`,
-      'StartupWMClass=fist-in', 'Categories=Game;', 'NoDisplay=true', ''].join('\n');
+      'StartupWMClass=re-punched', 'Categories=Game;', 'NoDisplay=true', ''].join('\n');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'fist-in.desktop'), text);
-    fs.rmSync(path.join(dir, 'punchout-pc.desktop'), { force: true }); // from before the rename
+    fs.writeFileSync(path.join(dir, 're-punched.desktop'), text);
+    for (const old of ['fist-in.desktop', 'punchout-pc.desktop']) fs.rmSync(path.join(dir, old), { force: true }); // earlier names
   } catch (err) {
     log(`Couldn't write the game's desktop entry: ${err.message}`);
   }
@@ -461,7 +463,7 @@ async function play() {
   const logFile = path.join(p.logs, 'game.log');
   await fsp.mkdir(p.logs, { recursive: true });
   const out = fs.createWriteStream(logFile);
-  setTask({ label: 'Playing Fist-In!!', detail: 'Close the game to come back here', percent: null });
+  setTask({ label: 'Playing Re-Punched!!', detail: 'Close the game to come back here', percent: null });
   const watcher = setInterval(() => send('state-changed'), 2000); // the Archipelago checkmark follows the game
   try {
     await spawnLogged(state.binary, [], { cwd: p.port, windowsHide: false }, line => out.write(line + '\n'));
@@ -476,6 +478,17 @@ async function play() {
 // The values WiiCompiled accepts (IsSupportedResolutionMultiplier / IsSupportedDisplayMode).
 const GRAPHICS_RESOLUTIONS = [0, 1, 1.5, 2, 3, 4, 6, 8];
 const GRAPHICS_DISPLAY_MODES = ['windowed', 'borderless', 'exclusive'];
+
+// Punch-Out!! controls: [punchout_controls] in Config.toml, the same keys and defaults as the game
+// (runtime punchout_controls.cpp). Per control: key, key2 (SDL key names or "Mouse Left"...), pad, pad2 (SDL gamepad
+// names: "a" is the bottom face button, "dpup", "lefttrigger"...). "" = unbound.
+const CONTROL_DEFAULTS = {
+  up: ['W', 'Up', 'dpup', ''], down: ['S', 'Down', 'dpdown', ''], left: ['A', 'Left', 'dpleft', ''],
+  right: ['D', 'Right', 'dpright', ''], one: ['J', '', 'a', ''], two: ['K', '', 'b', ''], a: ['L', 'Space', 'y', ''],
+  b: ['', '', 'x', ''], plus: ['Return', '', 'start', ''], minus: ['Backspace', '', 'back', ''],
+  page_left: ['Q', '', 'leftshoulder', ''], page_right: ['E', '', 'rightshoulder', '']
+};
+const CONTROL_SLOTS = ['key', 'key2', 'pad', 'pad2'];
 
 // The game reads its settings and disc location from port/UserData/Config.toml.
 function ensureGameConfig() {
@@ -498,6 +511,11 @@ function readGameSettings() {
     difficulty: get('punchout', 'difficulty', 'normal'),
     buttonStyle: get('punchout', 'button_style', 'auto'),
     skipStrapScreen: get('punchout', 'skip_strap_screen', true),
+    controls: {
+      lockMouse: get('punchout_controls', 'lock_mouse', false) === true,
+      bindings: Object.fromEntries(Object.entries(CONTROL_DEFAULTS).map(([control, defaults]) =>
+        [control, CONTROL_SLOTS.map((slot, i) => String(get('punchout_controls', `${control}_${slot}`, defaults[i])))]))
+    },
     // Same keys and defaults as WiiCompiled's F10 Graphics menu (runtime_config.h).
     graphics: {
       widescreen: get('video', 'widescreen', true) !== false,
@@ -524,6 +542,20 @@ function writeGameSettings(s) {
   if (s.difficulty) text = toml.set(text, 'punchout', 'difficulty', s.difficulty);
   if (s.buttonStyle) text = toml.set(text, 'punchout', 'button_style', s.buttonStyle);
   if (typeof s.skipStrapScreen === 'boolean') text = toml.set(text, 'punchout', 'skip_strap_screen', s.skipStrapScreen);
+  const c = s.controls;
+  if (c) {
+    if (typeof c.lockMouse === 'boolean') text = toml.set(text, 'punchout_controls', 'lock_mouse', c.lockMouse);
+    if (c.reset) {
+      for (const [control, defaults] of Object.entries(CONTROL_DEFAULTS)) {
+        CONTROL_SLOTS.forEach((slot, i) => { text = toml.set(text, 'punchout_controls', `${control}_${slot}`, defaults[i]); });
+      }
+    }
+    const b = c.binding;
+    if (b && Object.hasOwn(CONTROL_DEFAULTS, b.control) && Number.isInteger(b.slot) && b.slot >= 0 && b.slot < 4 &&
+        typeof b.value === 'string' && b.value.length <= 32) {
+      text = toml.set(text, 'punchout_controls', `${b.control}_${CONTROL_SLOTS[b.slot]}`, b.value);
+    }
+  }
   const g = s.graphics;
   if (g) {
     if (typeof g.widescreen === 'boolean') text = toml.set(text, 'video', 'widescreen', g.widescreen);
@@ -644,7 +676,7 @@ function registerHandlers() {
 function createWindow() {
   win = new BrowserWindow({
     width: 1080, height: 760, minWidth: 860, minHeight: 600, frame: false, backgroundColor: '#14121f',
-    title: 'Fist-In!! Launcher', show: false, icon: path.join(__dirname, 'assets', 'logo.png'),
+    title: 'Re-Punched!! Launcher', show: false, icon: path.join(__dirname, 'assets', 'logo.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false }
   });
   win.loadFile(path.join(__dirname, 'index.html'));

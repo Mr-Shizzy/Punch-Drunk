@@ -1,8 +1,8 @@
-# Fist-In!! Launcher
+# Re-Punched!! Launcher
 
 Not affiliated with or endorsed by Nintendo. Punch-Out!! is a trademark of Nintendo.
 
-Sets up and plays Fist-In!!, the Punch-Out!! (Wii, USA) PC port. Bring your own disc: the port is built on your computer from
+Sets up and plays Re-Punched!!, the Punch-Out!! (Wii, USA) PC port. Bring your own disc: the port is built on your computer from
 your own copy of the game; no game code or data is included.
 
 ## Run (development)

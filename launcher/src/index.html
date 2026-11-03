@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
-  <title>Fist-In!! Launcher</title>
+  <title>Re-Punched!! Launcher</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <header class="topbar">
     <div class="brand">
       <img class="brand-mark" src="assets/logo.png" alt="">
-      <span class="brand-name">Fist-In!!</span>
+      <span class="brand-name">Re-Punched!!</span>
     </div>
     <nav class="nav-bar">
       <button class="nav-item active" id="nav-play" data-page="play">Play</button>
@@ -42,7 +42,7 @@
       </div>
 
       <div class="card" id="setup">
-        <h2 id="setup-title">Set up Fist-In!!</h2>
+        <h2 id="setup-title">Set up Re-Punched!!</h2>
         <p class="muted" id="setup-intro">Bring your own disc: the port is built on this computer from your copy of the game. No game data is included.</p>
         <ol class="steps">
           <li class="step" id="step-1">
@@ -126,20 +126,30 @@
     <section class="page" id="page-controls">
       <div class="card">
         <h2>Controls</h2>
-        <p class="muted">A controller plays the game the way the Wii Remote held sideways does. Menus use the D-pad, A to choose and B to go back.</p>
+        <p class="muted">Play with the keyboard or a controller; the game treats both like a Wii Remote held sideways. The mouse moves the pointer in menus: left click chooses, right click goes back.</p>
         <div class="segmented" role="radiogroup" aria-label="Button style" data-setting="buttonStyle">
           <button data-value="auto" class="seg">Automatic</button>
           <button data-value="xbox" class="seg">Xbox</button>
           <button data-value="playstation" class="seg">PlayStation</button>
         </div>
-        <p class="muted small" id="style-note">The in-game button prompts follow the controller you have plugged in.</p>
+        <p class="muted small" id="style-note"></p>
+        <label class="switch"><input type="checkbox" id="lock-mouse"><span>Lock the mouse to the game window <span class="muted">· it can't leave the window while you play; F10 frees it</span></span></label>
         <table class="controls-table">
-          <thead><tr><th>Button</th><th>Wii Remote</th><th>In a fight</th></tr></thead>
+          <thead><tr><th>In a fight</th><th>Wii Remote</th><th>Keyboard</th><th>Controller</th></tr></thead>
           <tbody id="controls-body"></tbody>
         </table>
-        <p class="muted small">Rebinding comes in a later version.</p>
+        <p class="muted small">Click a box to change it, then press the key, mouse button or controller button. The left stick always moves too. In menus, a controller's A chooses and B goes back; on the keyboard, your left punch and right punch keys do. The bar at the bottom of menus shows them. <span id="controls-note"></span></p>
+        <button id="controls-reset" class="secondary">Reset to defaults</button>
       </div>
     </section>
+
+    <div class="capture" id="capture" hidden>
+      <div class="capture-box" role="dialog" aria-modal="true" aria-labelledby="capture-title">
+        <h3 id="capture-title"></h3>
+        <p id="capture-hint" class="muted"></p>
+        <div class="capture-buttons"><button id="capture-clear" class="secondary">Clear</button><button id="capture-cancel" class="secondary">Cancel</button></div>
+      </div>
+    </div>
 
     <!-- Settings -->
     <section class="page" id="page-settings">
@@ -205,7 +215,7 @@
     <section class="page" id="page-credits">
       <div class="card credits">
         <h2>Credits</h2>
-        <p><strong>Not affiliated with or endorsed by Nintendo.</strong> Fist-In!! is a non-commercial fan project that plays Punch-Out!! (Wii) from your own disc. Punch-Out!! and Nintendo are trademarks of Nintendo; the game and its content are © Nintendo. This launcher contains no game code or data and builds the port from your own disc.</p>
+        <p><strong>Not affiliated with or endorsed by Nintendo.</strong> Re-Punched!! is a non-commercial fan project that plays Punch-Out!! (Wii) from your own disc. Punch-Out!! and Nintendo are trademarks of Nintendo; the game and its content are © Nintendo. This launcher contains no game code or data and builds the port from your own disc.</p>
         <ul>
           <li><strong>WiiCompiled</strong>: the static recompiler and runtime the port is built on (GPL-3.0). <a href="#" data-url="https://github.com/patchzyy/wiicompiled">github.com/patchzyy/wiicompiled</a></li>
           <li><strong>SMS Launcher</strong> by Chase Myers: this launcher's starting point and its controller navigation (MIT). <a href="#" data-url="https://github.com/chasem-dev/sms-launcher">github.com/chasem-dev/sms-launcher</a></li>

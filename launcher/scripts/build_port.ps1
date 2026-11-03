@@ -1,4 +1,4 @@
-# Fist-In!!: builds the Punch-Out!! port on Windows (run by the launcher; the Windows twin of build_port.sh).
+# Re-Punched!!: builds the Punch-Out!! port on Windows (run by the launcher; the Windows twin of build_port.sh).
 #   PO_SRC     the port's files: punchout_region.patch, projects/punchout/{recomp.yml,MAP.txt}
 #   PO_WORK    workspace (WiiCompiled is cloned into PO_WORK\wiicompiled, its build tools go in PO_WORK\toolchain)
 #   PO_DATA    the extracted disc (sys\main.dol, files\...)
@@ -61,7 +61,7 @@ Git @('-C', $WC, 'reset', '-q', '--hard', $BaseCommit) "could not reset WiiCompi
 Git @('-C', $WC, 'submodule', 'update', '--init', '--recursive', '--force') 'submodule update failed'
 
 # ---------------------------------------------------------------------------------------------------------------
-Step 2 'Applying the Fist-In!! changes'
+Step 2 'Applying the Re-Punched!! changes'
 # Aurora's per-frame GPU buffers are fixed-size; some Punch-Out!! scenes overflow the defaults.
 Git @('-C', (Join-Path $WC 'aurora-main'), 'checkout', '-q', '--', 'lib/gfx/resources.hpp') 'could not reset resources.hpp'
 $res = Join-Path $WC 'aurora-main\lib\gfx\resources.hpp'
@@ -215,7 +215,7 @@ try {
     $configure = Get-MkwNativeConfigureArguments -SourceDirectory (Join-Path $WS 'runtime') -BuildDirectory $build `
         -Ninja $ninja -CCompiler $cc -CxxCompiler $cxx -ResourceCompiler $windres `
         -DependenciesDirectory (Join-Path $WS 'Dependencies') -NativePrebuiltDirectory '' `
-        -AdditionalArguments @("-DMKW_TRANSLATED_COMPILE_JOBS=$jobs", "-DMKW_X86_CPU_PROFILE=$cpu", '-DMKW_SETUP_VERSION=fist-in-launcher')
+        -AdditionalArguments @("-DMKW_TRANSLATED_COMPILE_JOBS=$jobs", "-DMKW_X86_CPU_PROFILE=$cpu", '-DMKW_SETUP_VERSION=re-punched-launcher')
     & $cmake @configure
     if ($LASTEXITCODE -ne 0) {
         # A build folder from an older layout or toolchain can refuse to reconfigure: start it fresh once.
@@ -234,7 +234,9 @@ try {
 # Install as a portable folder: its Config.toml, saves and logs stay inside it.
 $exe = Join-Path $build 'WiiCompiled.exe'
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { Fail "the game wasn't built ($exe)" }
-Copy-Item -LiteralPath $exe -Destination (Join-Path $Port 'FistIn.exe') -Force
+Copy-Item -LiteralPath $exe -Destination (Join-Path $Port 'RePunched.exe') -Force
+$oldExe = Join-Path $Port 'FistIn.exe'   # the game's earlier name
+if (Test-Path -LiteralPath $oldExe) { Remove-Item -LiteralPath $oldExe -Force }
 # The DLLs and data LocalBuild.ps1 ships beside the game, plus the CA bundle the Archipelago client verifies with.
 # initial_pipeline_cache.db is Mario Kart Wii's shader list; Punch-Out!! builds its own.
 foreach ($name in @('dxcompiler.dll', 'dxil.dll', 'libc++.dll', 'libpng16.dll', 'libunwind.dll', 'libz.dll', 'libzlib1.dll',
@@ -257,5 +259,5 @@ $portAssets = Join-Path $Port 'assets'
 if (Test-Path -LiteralPath $portAssets) { Remove-Item -LiteralPath $portAssets -Recurse -Force }
 Copy-Item -LiteralPath $assets -Destination $portAssets -Recurse
 [IO.File]::WriteAllText((Join-Path $Port 'portable.txt'), '')
-Say "BUILD OK: $(Join-Path $Port 'FistIn.exe')"
+Say "BUILD OK: $(Join-Path $Port 'RePunched.exe')"
 exit 0

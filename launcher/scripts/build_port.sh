@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fist-In!!: builds the Punch-Out!! port on this computer (run by the launcher; also works by hand).
+# Re-Punched!!: builds the Punch-Out!! port on this computer (run by the launcher; also works by hand).
 #   PO_SRC   the port's files: punchout_region.patch, projects/punchout/{recomp.yml,MAP.txt}
 #   PO_WORK  workspace (WiiCompiled is cloned into PO_WORK/wiicompiled)
 #   PO_DATA  the extracted disc (sys/main.dol, files/...)
@@ -31,7 +31,7 @@ git -C "$WC" fetch -q origin 2>/dev/null
 git -C "$WC" reset -q --hard "$BASE_COMMIT" || fail "could not reset WiiCompiled to $BASE_COMMIT"
 git -C "$WC" submodule update --init --recursive || fail "submodule update failed"
 
-step 2 "Applying the Fist-In!! changes"
+step 2 "Applying the Re-Punched!! changes"
 # Aurora's per-frame GPU buffers are fixed-size; some Punch-Out!! scenes overflow the defaults.
 RES="$WC/aurora-main/lib/gfx/resources.hpp"
 git -C "$WC/aurora-main" checkout -q -- lib/gfx/resources.hpp
@@ -78,11 +78,11 @@ step 7 "Compiling (the long one)"
 cmake --build "$NB" --target WiiCompiled --parallel "$(nproc)" || fail "compile failed"
 
 # Install as a portable folder: its Config.toml, saves and logs stay inside it.
-cp -f "$NB/WiiCompiled" "$PO_PORT/FistIn"
-rm -f "$PO_PORT/PunchOut"   # the game's name before the rename
+cp -f "$NB/WiiCompiled" "$PO_PORT/RePunched"
+rm -f "$PO_PORT/PunchOut" "$PO_PORT/FistIn"   # the game's earlier names
 for f in dsp_coef.bin cacert.pem; do [[ -f "$NB/$f" ]] && cp -f "$NB/$f" "$PO_PORT/"; done
 rm -f "$PO_PORT/initial_pipeline_cache.db"   # Mario Kart Wii's shader list; Punch-Out!! builds its own
 [[ -d "$NB/wii_bootstrap" ]] && cp -rf "$NB/wii_bootstrap" "$PO_PORT/"
 if [[ -d "$WC/runtime/assets" ]]; then rm -rf "$PO_PORT/assets"; cp -rf "$WC/runtime/assets" "$PO_PORT/assets"; fi
 touch "$PO_PORT/portable.txt"
-echo "BUILD OK: $PO_PORT/FistIn"
+echo "BUILD OK: $PO_PORT/RePunched"

@@ -1,11 +1,11 @@
 {
-  "name": "fist-in-launcher",
-  "version": "0.1.0",
+  "name": "re-punched-launcher",
+  "version": "0.2.0",
   "private": true,
-  "description": "Fist-In!!: sets up and launches the Punch-Out!! (Wii) PC port, built on your computer from your own disc",
+  "description": "Re-Punched!!: sets up and launches the Punch-Out!! (Wii) PC port, built on your computer from your own disc",
   "main": "src/main.js",
   "license": "MIT",
-  "author": "Fist-In!! contributors",
+  "author": "Re-Punched!! contributors",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "dev.fistin.launcher",
-    "productName": "Fist-In Launcher",
+    "productName": "Re-Punched Launcher",
     "files": [
       "src/**/*",
       "package.json"
@@ -46,7 +46,7 @@
       "target": "AppImage",
       "category": "Game",
       "icon": "build/icon.png",
-      "artifactName": "Fist-In-Launcher.${ext}",
+      "artifactName": "Re-Punched-Launcher.${ext}",
       "executableArgs": [
         "--no-sandbox"
       ]
@@ -61,16 +61,21 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "Fist-In-Launcher-Setup.${ext}"
+      "artifactName": "Re-Punched-Launcher-Setup.${ext}",
+      "compression": "maximum"
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Fist-In!!",
-      "uninstallDisplayName": "Fist-In!! Launcher",
+      "shortcutName": "Re-Punched!!",
+      "uninstallDisplayName": "Re-Punched!! Launcher",
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "electronLanguages": [
+      "en-US"
+    ],
+    "compression": "normal"
   }
 }

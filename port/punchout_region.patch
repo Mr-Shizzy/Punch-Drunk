@@ -12557,10 +12557,10 @@ HcmV?d00001
 
 diff --git a/runtime/assets/texture_packs/README.txt b/runtime/assets/texture_packs/README.txt
 new file mode 100644
-index 0000000..f7e67cd
+index 0000000..049efd2
 --- /dev/null
 +++ b/runtime/assets/texture_packs/README.txt
-@@ -0,0 +1,13 @@
+@@ -0,0 +1,20 @@
 +Punch-Out!! controller texture packs: the game's Wii Remote art swapped for controller art.
 +Copy one folder's files into UserData/texture_replacements (texture_replacements = true in Config.toml; read at start).
 +
@@ -12570,10 +12570,411 @@ index 0000000..f7e67cd
 +  tex1_256x256_d256164176d768e4_ec6a3c79729529f9_9  controls screen: Wii Remote held sideways -> a gamepad (original art, same in both packs;
 +                                                    drawn by tools/punchout_draw_gamepad.py)
 +
++keyboard/ holds only the controls screen's picture (a keyboard, drawn by tools/punchout_draw_keyboard.py), used
++while the player is on the keyboard; its label then reads "Keyboard".
++
++The three prompts ("1", "2", "Press A") follow the player's controls: the port draws them at start, and again when
++the bindings or the device change, from the bound button's glyph (assets/glyphs, any button: bumpers and triggers
++too) or as a keycap for a key, at the sizes above (mash prompts 74%), over these files (punchout_prompts.cpp).
++
 +Button glyphs: UI Elements by Arks @ScissorMarks, CC BY 4.0 (see assets/glyphs/CREDITS.txt). Controller art: made for
 +this port. Replacements are 2x the original size.
 +The controls screen's "Wii Remote" label reads "Gamepad": the port patches the player's own string table at start
 +(runtime/src/hle/punchout_disc_patches.cpp; patched copy in UserData/Cache/disc_patches, nothing from the disc ships).
+diff --git a/runtime/assets/texture_packs/keyboard/tex1_256x256_d256164176d768e4_ec6a3c79729529f9_9.png b/runtime/assets/texture_packs/keyboard/tex1_256x256_d256164176d768e4_ec6a3c79729529f9_9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..7291d3fac22252267a5c2913ec8352048c28fa82
+GIT binary patch
+literal 22737
+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
+QRK<vBa$JNsY~NS^01cDh)&Kwi
+
+literal 0
+HcmV?d00001
+
 diff --git a/runtime/assets/texture_packs/playstation/tex1_128x128_2a6f353beffd1d2c_5.png b/runtime/assets/texture_packs/playstation/tex1_128x128_2a6f353beffd1d2c_5.png
 new file mode 100644
 index 0000000000000000000000000000000000000000..e63520c9a91cb8835af3912ed87496f35eeb83b4
@@ -20416,6 +20817,56 @@ index e3ba175..a38e464 100644
  extern "C" void OS_HLE_ProcessAlarmsDeferred(int maxToProcess);
  extern "C" void OS_HLE_BeginDeferredGuestCallbacks();
  extern "C" void OS_HLE_EndDeferredGuestCallbacks();
+diff --git a/runtime/include/punchout_controls.h b/runtime/include/punchout_controls.h
+new file mode 100644
+index 0000000..501d8ef
+--- /dev/null
++++ b/runtime/include/punchout_controls.h
+@@ -0,0 +1,44 @@
++#pragma once
++
++// Punch-Out!!'s controls: which keyboard keys, mouse buttons and controller buttons press each button of the
++// emulated Wii Remote (held sideways). Saved in Config.toml [punchout_controls]; the launcher edits the same keys.
++
++#include <cstddef>
++#include <string>
++
++struct SDL_Gamepad;
++
++namespace PunchOutControls {
++
++// Directions are as the player sees them on screen (the remote is held sideways). PagePrev / PageNext are not remote
++// buttons: they turn menu pages, like a controller's bumpers (punchout_menu.cpp).
++enum Control : size_t { Up, Down, Left, Right, One, Two, A, B, Plus, Minus, PagePrev, PageNext, kControlCount };
++
++// Each control has two keyboard slots and two controller slots.
++enum Slot : size_t { Key1, Key2, Pad1, Pad2, kSlotCount };
++
++constexpr int kUnbound = -1;
++// Keyboard slots: an SDL scancode, or kMouseBase + an SDL mouse button (1 left, 2 middle, 3 right, 4/5 side).
++constexpr int kMouseBase = 1000;
++// Controller slots: an SDL gamepad button, or kTriggerBase + SDL_GAMEPAD_AXIS_LEFT_TRIGGER / RIGHT_TRIGGER.
++constexpr int kTriggerBase = 100;
++
++void Reload();
++int Binding(size_t control, size_t slot);
++void SetBinding(size_t control, size_t slot, int code); // also saves it
++void ResetDefaults();                                   // also saves them
++
++const char* ControlName(size_t control);   // "Up"
++const char* ControlAction(size_t control); // "Block (with a punch: punch to the face)"
++std::string KeyName(int code);             // "J", "Mouse Left", "" when unbound
++std::string PadName(int code);             // "A / Cross", "" when unbound
++
++// Keyboard and mouse slots (only while the game window has the focus).
++bool KeyHeld(size_t control);
++// Controller slots on the given gamepad (nullptr: false).
++bool PadHeld(size_t control, SDL_Gamepad* gamepad);
++
++bool LockMouse();
++void SetLockMouse(bool value); // also saves it
++
++} // namespace PunchOutControls
 diff --git a/runtime/include/punchout_trace.h b/runtime/include/punchout_trace.h
 new file mode 100644
 index 0000000..1c71f1d
@@ -20436,16 +20887,21 @@ index 0000000..1c71f1d
 +    return on;
 +}
 diff --git a/runtime/include/runtime_config.h b/runtime/include/runtime_config.h
-index ea5a12b..db60790 100644
+index ea5a12b..e70e74a 100644
 --- a/runtime/include/runtime_config.h
 +++ b/runtime/include/runtime_config.h
-@@ -93,6 +93,14 @@ struct RuntimeUserConfig {
+@@ -93,6 +93,19 @@ struct RuntimeUserConfig {
      std::optional<bool> rumbleEnabled;
      // Shake a motion controller to press the D-pad, like shaking a Wii Remote.
      std::optional<bool> motionTrick;
 +    std::optional<bool> skipStrapScreen;
 +    std::optional<std::string> difficulty;   // [punchout] difficulty: "normal", "hard" or "insane" (career fights)
 +    std::optional<std::string> buttonStyle;  // [punchout] button_style: "auto" (by controller), "xbox", "playstation"
++    // [punchout_controls]: lock_mouse, and <control>_key, _key2, _pad, _pad2 for each Punch-Out!! control
++    // (see kPunchOutControlKeys). Keys are SDL key names ("J", "Space", "Mouse Left"); pads are SDL gamepad
++    // names ("a" = bottom face button, "dpup", "leftshoulder", "lefttrigger"). "" means unbound.
++    std::optional<bool> lockMouse;
++    std::array<std::optional<std::string>, 48> punchOutControls;
 +    // [archipelago]: the built-in client (hle/punchout_ap_*.cpp). server "host:port", slot name, password,
 +    // enabled = connect at start, show_log = the message panel, patch_file = a .appunchout for servers whose
 +    // apworld doesn't send the seed's fighter order, connected = written by the client (the launcher reads it).
@@ -20454,13 +20910,36 @@ index ea5a12b..db60790 100644
      std::optional<int32_t> motionTrickSensitivity;
      std::optional<int32_t> muteHotkey;
      std::map<std::string, std::string> controllerExpressions;
-@@ -401,6 +409,15 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -387,6 +400,15 @@ inline void AppendOverlayRoots(RuntimeUserConfig& config, const std::string& roo
+     }
+ }
+ 
++// The Punch-Out!! controls in [punchout_controls], as directions on the screen with the remote held sideways.
++inline constexpr std::array<std::string_view, 12> kPunchOutControlNames = {
++    "up", "down", "left", "right", "one", "two", "a", "b", "plus", "minus", "page_left", "page_right",
++};
++inline constexpr std::array<std::string_view, 4> kPunchOutBindingSuffixes = {"_key", "_key2", "_pad", "_pad2"};
++inline std::string PunchOutControlKey(size_t control, size_t slot) {
++    return std::string(kPunchOutControlNames[control]) + std::string(kPunchOutBindingSuffixes[slot]);
++}
++
+ // Reads every supported setting out of a parsed Config.toml document.
+ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+     RuntimeUserConfig config;
+@@ -401,6 +423,22 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
  
      config.rumbleEnabled = FindConfigValue<bool>(document, "controller", "rumble");
      config.motionTrick = FindConfigValue<bool>(document, "controller", "motion_trick");
 +    config.skipStrapScreen = FindConfigValue<bool>(document, "punchout", "skip_strap_screen");
 +    config.difficulty = FindConfigValue<std::string>(document, "punchout", "difficulty");
 +    config.buttonStyle = FindConfigValue<std::string>(document, "punchout", "button_style");
++    config.lockMouse = FindConfigValue<bool>(document, "punchout_controls", "lock_mouse");
++    for (size_t control = 0; control < kPunchOutControlNames.size(); ++control) {
++        for (size_t slot = 0; slot < kPunchOutBindingSuffixes.size(); ++slot) {
++            config.punchOutControls[control * 4 + slot] =
++                FindConfigValue<std::string>(document, "punchout_controls", PunchOutControlKey(control, slot));
++        }
++    }
 +    config.apServer = FindConfigValue<std::string>(document, "archipelago", "server");
 +    config.apSlot = FindConfigValue<std::string>(document, "archipelago", "slot");
 +    config.apPassword = FindConfigValue<std::string>(document, "archipelago", "password");
@@ -20470,7 +20949,7 @@ index ea5a12b..db60790 100644
      if (const auto value = FindConfigInt(document, "controller", "motion_trick_sensitivity"); value && *value >= 1 && *value <= 5) {
          config.motionTrickSensitivity = *value;
      }
-@@ -719,6 +736,55 @@ inline bool SetRumbleEnabled(bool value) {
+@@ -719,6 +757,55 @@ inline bool SetRumbleEnabled(bool value) {
      return WriteSetting("controller", "rumble", value ? "true" : "false");
  }
  
@@ -20526,9 +21005,34 @@ index ea5a12b..db60790 100644
  inline bool MotionTrickEnabled(bool fallback = false) {
      return Get().motionTrick.value_or(fallback);
  }
+@@ -746,6 +833,24 @@ inline bool SetMuteHotkey(int32_t value) {
+     return WriteSetting("audio", "mute_key", std::to_string(value));
+ }
+ 
++inline bool LockMouse(bool fallback = false) {
++    return Get().lockMouse.value_or(fallback);
++}
++inline bool SetLockMouse(bool value) {
++    Mutable().lockMouse = value;
++    return WriteSetting("punchout_controls", "lock_mouse", value ? "true" : "false");
++}
++// std::nullopt when the file doesn't set it (the default applies); "" when it is set to unbound.
++inline std::optional<std::string> PunchOutControl(size_t control, size_t slot) {
++    if (control >= kPunchOutControlNames.size() || slot >= kPunchOutBindingSuffixes.size()) return std::nullopt;
++    return Get().punchOutControls[control * 4 + slot];
++}
++inline bool SetPunchOutControl(size_t control, size_t slot, const std::string& value) {
++    if (control >= kPunchOutControlNames.size() || slot >= kPunchOutBindingSuffixes.size()) return false;
++    Mutable().punchOutControls[control * 4 + slot] = value;
++    return WriteSetting("punchout_controls", PunchOutControlKey(control, slot), FormatString(value));
++}
++
+ inline bool SetAudioVolume(float value) {
+     value = std::clamp(value, 0.0f, 1.0f);
+     Mutable().audioVolume = value;
 diff --git a/runtime/include/wiimote_emulated.h b/runtime/include/wiimote_emulated.h
 new file mode 100644
-index 0000000..2c4a282
+index 0000000..b96b35c
 --- /dev/null
 +++ b/runtime/include/wiimote_emulated.h
 @@ -0,0 +1,23 @@
@@ -20541,9 +21045,9 @@ index 0000000..2c4a282
 +// still. The pointer is emulated: while the game has the IR camera on, the right stick moves it
 +// (or the PC mouse over the window places it, left click = A) and the camera sees the sensor bar.
 +//
-+// Layout (the remote is held sideways, D-pad on the left; D-pad directions are screen directions):
-+//   D-pad / left stick -> D-pad     A (south) -> 1     B (east) -> 2
-+//   X (west) -> B                   Y (north) -> A     Start -> +     Back -> -
++// Controls: keyboard, mouse buttons and gamepad buttons through Punch-Out!!'s bindings (punchout_controls.h,
++// Config.toml [punchout_controls]; defaults there). The keyboard alone is enough to play. The left stick always
++// works as the D-pad; the mouse's left and right buttons are A and B in menus.
 +// No HOME button: there is no Wii menu to return to.
 +
 +#include "bluetooth/bt_controller.h"
@@ -29848,10 +30352,10 @@ index 0000000..7614164
 +)MENULINKS"
 diff --git a/runtime/src/hle/punchout_prompts.cpp b/runtime/src/hle/punchout_prompts.cpp
 new file mode 100644
-index 0000000..186a07d
+index 0000000..5be3280
 --- /dev/null
 +++ b/runtime/src/hle/punchout_prompts.cpp
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,744 @@
 +// Punch-Out!! controller prompt banner: "(A) OK   (B) Back" at the bottom of menu screens while a controller is
 +// connected, drawn by the port over the game (ImGui), with the connected controller's button glyphs.
 +// Glyphs: assets/glyphs/<xbox|playstation>/<button>[_pressed].png next to the executable (every button has a
@@ -29859,6 +30363,8 @@ index 0000000..186a07d
 +// lefttrigger, righttrigger, leftstick, rightstick, back, start, guide, touchpad, dpad, dpad_up/down/left/right) (UI Elements by Arks @ScissorMarks,
 +// CC BY 4.0, see assets/glyphs/CREDITS.txt). Missing files: plain text labels instead.
 +
++#include "guest_abi/memory.h"
++#include "punchout_controls.h"
 +#include "runtime_config.h"
 +
 +#include <aurora/imgui.h>
@@ -29870,7 +30376,13 @@ index 0000000..186a07d
 +#include <SDL3/SDL_gamepad.h>
 +#include <SDL3/SDL_stdinc.h>
 +
++#include <algorithm>
++#include <array>
 +#include <cfloat>
++#include <chrono>
++#include <cmath>
++#include <functional>
++#include <vector>
 +#include <cstdio>
 +#include <filesystem>
 +#include <fstream>
@@ -29902,13 +30414,31 @@ index 0000000..186a07d
 +#pragma GCC diagnostic pop
 +#endif
 +
++// Keycap labels are drawn with the banner's font through ImGui's copy of stb_truetype (private to this file).
++#define STBTT_STATIC
++#define STB_TRUETYPE_IMPLEMENTATION
++#if defined(__clang__)
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wunused-function"
++#elif defined(__GNUC__)
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wunused-function"
++#endif
++#include "imstb_truetype.h"
++#if defined(__clang__)
++#pragma clang diagnostic pop
++#elif defined(__GNUC__)
++#pragma GCC diagnostic pop
++#endif
++
 +extern "C" bool PunchOut_MenuActive();
 +extern "C" uint32_t PunchOut_MenuBumpers(); // bit 0: LB turns a page here, bit 1: RB (punchout_menu.cpp)
 +extern "C" uint32_t Wiimote_PadButtons(); // bit 4 = south (A / Cross), bit 5 = east (B / Circle)
++extern "C" int Wiimote_LastInputDevice(); // 0 nothing yet, 1 keyboard, 2 gamepad (wiimote_emulated.cpp)
 +
 +namespace {
 +
-+enum class Style { Xbox, PlayStation };
++enum class Style { Xbox, PlayStation, Keyboard };
 +
 +struct Glyph {
 +    bool tried = false;
@@ -29990,20 +30520,407 @@ index 0000000..186a07d
 +    if (loaded >= 0) aurora::texture::unregister_replacements(group);
 +    const char* base = SDL_GetBasePath();
 +    const std::filesystem::path dir = std::filesystem::path(base ? base : "") / "assets" / "texture_packs" /
-+                                      (style == Style::PlayStation ? "playstation" : "xbox");
++                                      (style == Style::PlayStation ? "playstation"
++                                       : style == Style::Keyboard  ? "keyboard"
++                                                                   : "xbox");
 +    group = aurora::texture::load_replacement_directory(dir, aurora::texture::ReplacementOptions{.priority = 100});
 +    loaded = want;
-+    std::fprintf(stderr, "[prompts] texture pack: %s (%zu textures)\n", style == Style::PlayStation ? "playstation" : "xbox",
++    std::fprintf(stderr, "[prompts] texture pack: %s (%zu textures)\n",
++                 style == Style::PlayStation ? "playstation" : style == Style::Keyboard ? "keyboard" : "xbox",
 +                 group.registrations.size());
++}
++
++// ---------------------------------------------------------------------------------------------------------------
++// The prompt art that follows the controls: the fight's mash prompts ("1", "2") and the "Press A" icon show the
++// button or key the player actually bound (PunchOutControls), drawn into 256x256 RGBA textures when the game starts
++// and again whenever the bindings or the device change, and registered over the texture pack (higher priority).
++// Controller buttons use the glyph art (assets/glyphs/<style>/<button>.png, every button including bumpers and
++// triggers); keys are drawn as keycaps with the banner's font. Mash prompts are 74% of the canvas, like the pack's.
++
++struct Rgba {
++    int w = 0, h = 0;
++    std::vector<uint8_t> px; // straight alpha
++};
++
++Rgba LoadPng(const std::string& path) {
++    Rgba img;
++    int n = 0;
++    stbi_uc* data = stbi_load(path.c_str(), &img.w, &img.h, &n, 4);
++    if (data == nullptr) return {};
++    img.px.assign(data, data + static_cast<size_t>(img.w) * img.h * 4);
++    stbi_image_free(data);
++    return img;
++}
++
++std::string AssetPath(const std::string& rel) {
++    const char* base = SDL_GetBasePath();
++    return std::string(base ? base : "") + rel;
++}
++
++// Source-over of one straight-alpha color with coverage a (0..1) onto dst pixel i.
++void Over(Rgba& dst, size_t i, float r, float g, float b, float a) {
++    if (a <= 0.f) return;
++    uint8_t* d = &dst.px[i * 4];
++    const float da = d[3] / 255.f;
++    const float oa = a + da * (1.f - a);
++    if (oa <= 0.f) return;
++    const auto mix = [&](float s, uint8_t dc) { return (s * a + dc / 255.f * da * (1.f - a)) / oa; };
++    d[0] = static_cast<uint8_t>(std::lround(std::clamp(mix(r, d[0]), 0.f, 1.f) * 255.f));
++    d[1] = static_cast<uint8_t>(std::lround(std::clamp(mix(g, d[1]), 0.f, 1.f) * 255.f));
++    d[2] = static_cast<uint8_t>(std::lround(std::clamp(mix(b, d[2]), 0.f, 1.f) * 255.f));
++    d[3] = static_cast<uint8_t>(std::lround(std::clamp(oa, 0.f, 1.f) * 255.f));
++}
++
++// src scaled (bilinear, premultiplied) to fit a box x box square centred on the canvas.
++void BlitFit(Rgba& dst, const Rgba& src, float box) {
++    if (src.w <= 0 || src.h <= 0) return;
++    const float scale = box / static_cast<float>(std::max(src.w, src.h));
++    const float w = src.w * scale, h = src.h * scale;
++    const float x0 = (dst.w - w) * 0.5f, y0 = (dst.h - h) * 0.5f;
++    for (int y = 0; y < dst.h; ++y) {
++        for (int x = 0; x < dst.w; ++x) {
++            const float sx = (x + 0.5f - x0) / scale - 0.5f, sy = (y + 0.5f - y0) / scale - 0.5f;
++            if (sx < -1.f || sy < -1.f || sx > src.w || sy > src.h) continue;
++            float acc[4] = {};
++            const int ix = static_cast<int>(std::floor(sx)), iy = static_cast<int>(std::floor(sy));
++            const float fx = sx - ix, fy = sy - iy;
++            for (int k = 0; k < 4; ++k) {
++                const int px = ix + (k & 1), py = iy + (k >> 1);
++                if (px < 0 || py < 0 || px >= src.w || py >= src.h) continue;
++                const float wgt = ((k & 1) ? fx : 1.f - fx) * ((k >> 1) ? fy : 1.f - fy);
++                const uint8_t* p = &src.px[(static_cast<size_t>(py) * src.w + px) * 4];
++                const float a = p[3] / 255.f;
++                acc[0] += p[0] / 255.f * a * wgt;
++                acc[1] += p[1] / 255.f * a * wgt;
++                acc[2] += p[2] / 255.f * a * wgt;
++                acc[3] += a * wgt;
++            }
++            if (acc[3] <= 0.f) continue;
++            Over(dst, static_cast<size_t>(y) * dst.w + x, acc[0] / acc[3], acc[1] / acc[3], acc[2] / acc[3], acc[3]);
++        }
++    }
++}
++
++// Coverage of a rounded rectangle (centre cx, cy; half size hw, hh; corner radius r) at pixel centre (x, y).
++float RoundRectCoverage(float x, float y, float cx, float cy, float hw, float hh, float r) {
++    const float qx = std::fabs(x - cx) - (hw - r), qy = std::fabs(y - cy) - (hh - r);
++    const float ox = std::max(qx, 0.f), oy = std::max(qy, 0.f);
++    const float d = std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.f) - r;
++    return std::clamp(0.5f - d, 0.f, 1.f);
++}
++
++void FillRoundRect(Rgba& dst, float cx, float cy, float hw, float hh, float r, float cr, float cg, float cb) {
++    for (int y = 0; y < dst.h; ++y) {
++        for (int x = 0; x < dst.w; ++x) {
++            const float c = RoundRectCoverage(x + 0.5f, y + 0.5f, cx, cy, hw, hh, r);
++            if (c > 0.f) Over(dst, static_cast<size_t>(y) * dst.w + x, cr, cg, cb, c);
++        }
++    }
++}
++
++// A filled triangle, 4x4 supersampled (the arrow keys' arrows).
++void FillTriangle(Rgba& dst, std::array<float, 6> t, float cr, float cg, float cb) {
++    const auto edge = [](float ax, float ay, float bx, float by, float px, float py) {
++        return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
++    };
++    const float minX = std::min({t[0], t[2], t[4]}), maxX = std::max({t[0], t[2], t[4]});
++    const float minY = std::min({t[1], t[3], t[5]}), maxY = std::max({t[1], t[3], t[5]});
++    for (int y = std::max(0, static_cast<int>(minY)); y <= std::min(dst.h - 1, static_cast<int>(maxY)); ++y) {
++        for (int x = std::max(0, static_cast<int>(minX)); x <= std::min(dst.w - 1, static_cast<int>(maxX)); ++x) {
++            int inside = 0;
++            for (int s = 0; s < 16; ++s) {
++                const float px = x + (s % 4 + 0.5f) / 4.f, py = y + (s / 4 + 0.5f) / 4.f;
++                const float e0 = edge(t[0], t[1], t[2], t[3], px, py), e1 = edge(t[2], t[3], t[4], t[5], px, py),
++                            e2 = edge(t[4], t[5], t[0], t[1], px, py);
++                if ((e0 >= 0 && e1 >= 0 && e2 >= 0) || (e0 <= 0 && e1 <= 0 && e2 <= 0)) ++inside;
++            }
++            if (inside) Over(dst, static_cast<size_t>(y) * dst.w + x, cr, cg, cb, inside / 16.f);
++        }
++    }
++}
++
++struct KeyFont {
++    std::vector<uint8_t> ttf;
++    stbtt_fontinfo info{};
++    bool ok = false;
++};
++KeyFont& GetKeyFont() {
++    static KeyFont font;
++    static bool tried = false;
++    if (!tried) {
++        tried = true;
++        std::ifstream in(AssetPath("assets/fonts/OpenSans-SemiBold.ttf"), std::ios::binary);
++        font.ttf.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
++        font.ok = !font.ttf.empty() && stbtt_InitFont(&font.info, font.ttf.data(), 0) != 0;
++    }
++    return font;
++}
++
++float TextWidth(KeyFont& f, const std::string& text, float scale) {
++    float w = 0.f;
++    for (size_t i = 0; i < text.size(); ++i) {
++        int adv = 0, lsb = 0;
++        stbtt_GetCodepointHMetrics(&f.info, static_cast<unsigned char>(text[i]), &adv, &lsb);
++        w += adv * scale;
++        if (i + 1 < text.size()) {
++            w += stbtt_GetCodepointKernAdvance(&f.info, static_cast<unsigned char>(text[i]),
++                                               static_cast<unsigned char>(text[i + 1])) * scale;
++        }
++    }
++    return w;
++}
++
++// White text centred on (cx, cy) at pixel height px.
++void DrawText(Rgba& dst, const std::string& text, float cx, float cy, float px) {
++    KeyFont& f = GetKeyFont();
++    if (!f.ok || text.empty()) return;
++    const float scale = stbtt_ScaleForPixelHeight(&f.info, px);
++    int ascent = 0, descent = 0, gap = 0;
++    stbtt_GetFontVMetrics(&f.info, &ascent, &descent, &gap);
++    int capX0 = 0, capY0 = 0, capX1 = 0, capY1 = 0; // centre on the capitals' height, not the full line
++    stbtt_GetCodepointBox(&f.info, 'H', &capX0, &capY0, &capX1, &capY1);
++    const float baseline = cy + capY1 * scale * 0.5f;
++    float x = cx - TextWidth(f, text, scale) * 0.5f;
++    for (size_t i = 0; i < text.size(); ++i) {
++        const int cp = static_cast<unsigned char>(text[i]);
++        int w = 0, h = 0, xoff = 0, yoff = 0;
++        const float sub = x - std::floor(x);
++        unsigned char* bmp = stbtt_GetCodepointBitmapSubpixel(&f.info, scale, scale, sub, 0.f, cp, &w, &h, &xoff, &yoff);
++        const int ox = static_cast<int>(std::floor(x)) + xoff, oy = static_cast<int>(std::lround(baseline)) + yoff;
++        for (int yy = 0; yy < h; ++yy) {
++            for (int xx = 0; xx < w; ++xx) {
++                const int tx = ox + xx, ty = oy + yy;
++                if (tx < 0 || ty < 0 || tx >= dst.w || ty >= dst.h) continue;
++                Over(dst, static_cast<size_t>(ty) * dst.w + tx, 1.f, 1.f, 1.f, bmp[yy * w + xx] / 255.f);
++            }
++        }
++        stbtt_FreeBitmap(bmp, nullptr);
++        int adv = 0, lsb = 0;
++        stbtt_GetCodepointHMetrics(&f.info, cp, &adv, &lsb);
++        x += adv * scale;
++        if (i + 1 < text.size()) x += stbtt_GetCodepointKernAdvance(&f.info, cp, static_cast<unsigned char>(text[i + 1])) * scale;
++    }
++}
++
++// A keycap in the glyphs' look (white rim, dark body, lighter top face): box = the cap's height; wide labels widen
++// the cap up to maxWidth, then shrink the text. arrow: 0 none, 1 up, 2 down, 3 left, 4 right.
++void DrawKeycap(Rgba& dst, float box, float maxWidth, const std::string& label, int arrow) {
++    KeyFont& f = GetKeyFont();
++    const float h = box * 0.84f;
++    float textPx = h * (label.size() <= 2 ? 0.48f : 0.40f);
++    const float textW = f.ok ? TextWidth(f, label, stbtt_ScaleForPixelHeight(&f.info, textPx)) : 0.f;
++    float w = std::max(h, textW + h * 0.55f);
++    if (w > maxWidth) {
++        textPx *= (maxWidth - h * 0.55f) / std::max(1.f, textW);
++        w = maxWidth;
++    }
++    const float cx = dst.w * 0.5f, cy = dst.h * 0.5f, r = h * 0.22f;
++    FillRoundRect(dst, cx, cy, w * 0.5f, h * 0.5f, r, 1.f, 1.f, 1.f);                         // rim
++    const float rim = h * 0.05f;
++    FillRoundRect(dst, cx, cy, w * 0.5f - rim, h * 0.5f - rim, r - rim * 0.6f, 0.17f, 0.17f, 0.18f); // body / lip
++    const float topH = (h - rim * 2.f) * 0.80f, inset = h * 0.07f;                            // top face, raised
++    const float topCy = cy - h * 0.5f + rim + inset * 0.6f + topH * 0.5f;
++    FillRoundRect(dst, cx, topCy, w * 0.5f - rim - inset, topH * 0.5f - inset * 0.4f, r * 0.7f, 0.27f, 0.27f, 0.29f);
++    if (arrow != 0) {
++        const float a = h * 0.17f;
++        std::array<float, 6> t{};
++        switch (arrow) {
++        case 1: t = {cx, topCy - a, cx - a, topCy + a * 0.7f, cx + a, topCy + a * 0.7f}; break;
++        case 2: t = {cx, topCy + a, cx - a, topCy - a * 0.7f, cx + a, topCy - a * 0.7f}; break;
++        case 3: t = {cx - a, topCy, cx + a * 0.7f, topCy - a, cx + a * 0.7f, topCy + a}; break;
++        default: t = {cx + a, topCy, cx - a * 0.7f, topCy - a, cx - a * 0.7f, topCy + a}; break;
++        }
++        FillTriangle(dst, t, 1.f, 1.f, 1.f);
++    } else {
++        DrawText(dst, label, cx, topCy, textPx);
++    }
++}
++
++// The keycap text for a key binding, and its arrow (0 for none).
++std::string KeycapLabel(int code, int& arrow) {
++    arrow = 0;
++    switch (code) {
++    case SDL_SCANCODE_UP: arrow = 1; return "";
++    case SDL_SCANCODE_DOWN: arrow = 2; return "";
++    case SDL_SCANCODE_LEFT: arrow = 3; return "";
++    case SDL_SCANCODE_RIGHT: arrow = 4; return "";
++    case SDL_SCANCODE_RETURN: return "Enter";
++    case SDL_SCANCODE_BACKSPACE: return "Back";
++    case SDL_SCANCODE_CAPSLOCK: return "Caps";
++    case SDL_SCANCODE_PAGEUP: return "PgUp";
++    case SDL_SCANCODE_PAGEDOWN: return "PgDn";
++    case SDL_SCANCODE_INSERT: return "Ins";
++    case SDL_SCANCODE_DELETE: return "Del";
++    case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT: return "Shift";
++    case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: return "Ctrl";
++    case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: return "Alt";
++    case SDL_SCANCODE_LGUI: case SDL_SCANCODE_RGUI: return "Super";
++    case PunchOutControls::kMouseBase + 1: return "LMB";
++    case PunchOutControls::kMouseBase + 2: return "MMB";
++    case PunchOutControls::kMouseBase + 3: return "RMB";
++    case PunchOutControls::kMouseBase + 4: return "M4";
++    case PunchOutControls::kMouseBase + 5: return "M5";
++    default: break;
++    }
++    std::string name = PunchOutControls::KeyName(code);
++    if (name.rfind("Keypad ", 0) == 0) name = "Num" + name.substr(7);
++    return name;
++}
++
++// The glyph file for a controller binding, or nullptr when there is no art for it (drawn as a keycap instead).
++const char* PadGlyphName(int code) {
++    switch (code) {
++    case SDL_GAMEPAD_BUTTON_SOUTH: return "south";
++    case SDL_GAMEPAD_BUTTON_EAST: return "east";
++    case SDL_GAMEPAD_BUTTON_WEST: return "west";
++    case SDL_GAMEPAD_BUTTON_NORTH: return "north";
++    case SDL_GAMEPAD_BUTTON_BACK: return "back";
++    case SDL_GAMEPAD_BUTTON_GUIDE: return "guide";
++    case SDL_GAMEPAD_BUTTON_START: return "start";
++    case SDL_GAMEPAD_BUTTON_LEFT_STICK: return "leftstick";
++    case SDL_GAMEPAD_BUTTON_RIGHT_STICK: return "rightstick";
++    case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: return "leftshoulder";
++    case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return "rightshoulder";
++    case SDL_GAMEPAD_BUTTON_DPAD_UP: return "dpad_up";
++    case SDL_GAMEPAD_BUTTON_DPAD_DOWN: return "dpad_down";
++    case SDL_GAMEPAD_BUTTON_DPAD_LEFT: return "dpad_left";
++    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: return "dpad_right";
++    case PunchOutControls::kTriggerBase + SDL_GAMEPAD_AXIS_LEFT_TRIGGER: return "lefttrigger";
++    case PunchOutControls::kTriggerBase + SDL_GAMEPAD_AXIS_RIGHT_TRIGGER: return "righttrigger";
++    default: return nullptr;
++    }
++}
++
++// The first bound key (keyboard) or button (controller) of a control, or kUnbound.
++int FirstBinding(size_t control, bool keyboard) {
++    using namespace PunchOutControls;
++    const int a = Binding(control, keyboard ? Key1 : Pad1);
++    return a != kUnbound ? a : Binding(control, keyboard ? Key2 : Pad2);
++}
++
++// One prompt texture: the binding's glyph or keycap in a 256x256 canvas, `box` pixels tall.
++Rgba DrawBinding(Style style, int code, float box, float maxWidth) {
++    Rgba img;
++    img.w = img.h = 256;
++    img.px.assign(256 * 256 * 4, 0);
++    if (style == Style::Keyboard) {
++        int arrow = 0;
++        const std::string label = KeycapLabel(code, arrow);
++        DrawKeycap(img, box, maxWidth, label, arrow);
++        return img;
++    }
++    if (const char* glyph = PadGlyphName(code)) {
++        const Rgba src = LoadPng(AssetPath(std::string("assets/glyphs/") +
++                                           (style == Style::PlayStation ? "playstation/" : "xbox/") + glyph + ".png"));
++        if (!src.px.empty()) {
++            BlitFit(img, src, box);
++            return img;
++        }
++    }
++    int arrow = 0;
++    DrawKeycap(img, box, maxWidth, PunchOutControls::PadName(code), arrow); // touchpad, paddles...: a labelled cap
++    return img;
++}
++
++// Rebuilds and registers the three prompt textures when the style or the bindings they show change.
++void UpdatePromptArt(Style style) {
++    using namespace PunchOutControls;
++    const bool keyboard = style == Style::Keyboard;
++    int one = FirstBinding(One, keyboard), two = FirstBinding(Two, keyboard);
++    // "Press A" takes the left punch's button in menus and cutscenes (wiimote_emulated.cpp); the star punch's if unbound.
++    const int pressA = one != kUnbound ? one : FirstBinding(PunchOutControls::A, keyboard);
++    const std::array<int, 4> signature = {static_cast<int>(style), one, two, pressA};
++    static std::array<int, 4> applied = {-1, -2, -2, -2};
++    if (signature == applied) return;
++    applied = signature;
++
++    struct Art {
++        const char* file; // the texture it replaces (texture pack naming)
++        int code;
++        float box, maxWidth;
++    };
++    constexpr float kFull = 256.f, kMash = 256.f * 0.74f;
++    const std::array<Art, 3> arts = {{
++        {"tex1_128x128_ff0d42747046b66c_4d71081cc1d2542b_9.png", one, kMash, 250.f},   // mash "1": left punch
++        {"tex1_128x128_6150a782d87e506b_ef58c6d3a3c22c18_9.png", two, kMash, 250.f},   // mash "2": right punch
++        {"tex1_128x128_2a6f353beffd1d2c_5.png", pressA, kFull, 254.f},                // "Press A"
++    }};
++    static std::vector<aurora::texture::ReplacementRegistration> registrations;
++    static std::array<std::vector<uint8_t>, 3> pixels; // borrowed by the registrations: freed only after unregistering
++    aurora::texture::unregister_replacements(registrations);
++    registrations.clear();
++    for (size_t i = 0; i < arts.size(); ++i) {
++        pixels[i].clear();
++        if (arts[i].code == kUnbound) continue; // nothing bound for this device: the pack's (or the game's) art stays
++        pixels[i] = DrawBinding(style, arts[i].code, arts[i].box, arts[i].maxWidth).px;
++        const auto key = aurora::texture::parse_replacement_filename(arts[i].file);
++        if (!key) continue;
++        aurora::texture::RawTextureReplacement raw{
++            .bytes = std::span<const uint8_t>(pixels[i]), .width = 256, .height = 256, .mipCount = 1,
++            .gxFormat = GX_TF_RGBA8_PC, .label = arts[i].file};
++        registrations.push_back(aurora::texture::register_replacement(*key, raw, {.priority = 200}));
++    }
++    std::fprintf(stderr, "[prompts] prompt art for %s: %zu textures\n",
++                 keyboard ? "keyboard" : style == Style::PlayStation ? "playstation" : "xbox", registrations.size());
++}
++
++// The controls screen's "Gamepad" label (patched in from "Wii Remote", punchout_disc_patches.cpp) reads "Keyboard"
++// while the keyboard is in use. The string table sits in guest memory and the screen looks its text up every frame,
++// so the label is rewritten in place (both fit the original 10-character slot). Found by searching for the patched
++// string, on menu screens only and a few times at most (other languages keep their own label).
++void UpdateControlsLabel(bool keyboard, bool menu) {
++    using Clock = std::chrono::steady_clock;
++    static uint8_t* where = nullptr;
++    static int applied = -1, scans = 0;
++    static Clock::time_point nextScan{};
++    const int want = keyboard ? 1 : 0;
++    const auto utf16 = [](const char* s) {
++        std::vector<uint8_t> v;
++        for (; *s; ++s) { v.push_back(0); v.push_back(static_cast<uint8_t>(*s)); }
++        v.resize(20, 0); // the slot: 10 characters
++        return v;
++    };
++    static const std::vector<uint8_t> kGamepad = utf16("Gamepad"), kKeyboard = utf16("Keyboard");
++    const auto holdsLabel = [&](const uint8_t* p) {
++        return p != nullptr && (std::equal(kGamepad.begin(), kGamepad.end(), p) ||
++                                std::equal(kKeyboard.begin(), kKeyboard.end(), p)) && p[20] == 0 && p[21] == 0;
++    };
++    if (where != nullptr && !holdsLabel(where)) { where = nullptr; applied = -1; } // the table was reloaded
++    if (where != nullptr && applied == want) return;
++    if (where == nullptr) {
++        if (!menu || scans >= 4 || Clock::now() < nextScan) return;
++        ++scans;
++        nextScan = Clock::now() + std::chrono::seconds(3);
++        // A whole string: 00 00 before it, its 20 bytes, 00 00 after.
++        for (const auto* pattern : {&kGamepad, &kKeyboard}) {
++            std::vector<uint8_t> needle = {0, 0};
++            needle.insert(needle.end(), pattern->begin(), pattern->end());
++            needle.push_back(0);
++            needle.push_back(0);
++            for (const auto& [base, size] : {std::pair<uint32_t, size_t>{0x80000000u, 0x01800000u},
++                                            std::pair<uint32_t, size_t>{0x90000000u, 0x04000000u}}) {
++                uint8_t* mem = Memory::GetPointer(base, size);
++                if (mem == nullptr) continue;
++                const auto it = std::search(mem, mem + size,
++                                            std::boyer_moore_horspool_searcher(needle.begin(), needle.end()));
++                if (it != mem + size && ((it - mem) & 1) == 0) { where = it + 2; break; }
++            }
++            if (where != nullptr) break;
++        }
++        if (where == nullptr) return;
++        scans = 0;
++    }
++    std::copy(want ? kKeyboard.begin() : kGamepad.begin(), want ? kKeyboard.end() : kGamepad.end(), where);
++    applied = want;
 +}
 +
 +} // namespace
 +
-+// The game window's name and icon: "Fist-In!!" (the project's name) with the launcher's glove (assets/punchout/icon.png) instead of
++// The game window's name and icon: "Re-Punched!!" (the project's name) with the launcher's glove (assets/punchout/icon.png) instead of
 +// WiiCompiled's. The app ID is what Linux desktops match windows to icons and launchers by (Wayland app_id / X11
-+// WM_CLASS); the launcher writes a matching fist-in.desktop. Called before aurora_initialize creates the window.
++// WM_CLASS); the launcher writes a matching re-punched.desktop. Called before aurora_initialize creates the window.
 +extern "C" void PunchOut_WindowIdentity(void** rgba, uint32_t* width, uint32_t* height) {
-+    SDL_SetAppMetadata("Fist-In!!", nullptr, "fist-in");
++    SDL_SetAppMetadata("Re-Punched!!", nullptr, "re-punched");
 +    const char* base = SDL_GetBasePath();
 +    const std::filesystem::path file = std::filesystem::path(base ? base : "") / "assets" / "punchout" / "icon.png";
 +    std::ifstream in(file, std::ios::binary);
@@ -30029,29 +30946,58 @@ index 0000000..186a07d
 +}
 +
 +// Called from the overlay's per-frame ImGui pass (settings_overlay.cpp Draw()).
-+// "(LB) <  (RB) >   (A) OK  (B) Back": the bumpers only on screens where they turn a page (PunchOut_MenuBumpers).
++// "(LB) <  (RB) >   (A) OK  (B) Back" on menus: the page buttons only on screens where they turn a page
++// (PunchOut_MenuBumpers). Keyboard players get keycaps of their own keys instead.
 +extern "C" void PunchOut_DrawPromptBanner() {
 +    Style style = Style::Xbox;
 +    const bool hasPad = ConnectedStyle(style);
++    // Keyboard art and keycaps while the keyboard was used last (or there is no controller at all).
++    const int last = Wiimote_LastInputDevice();
++    if (last == 1 || (last == 0 && !hasPad)) style = Style::Keyboard;
 +    UpdateTexturePack(style); // also in fights: the mash prompt uses it
-+    if (!PunchOut_MenuActive() || !hasPad) return;
++    UpdatePromptArt(style);
++    const bool menu = PunchOut_MenuActive();
++    const bool keyboard = style == Style::Keyboard;
++    UpdateControlsLabel(keyboard, menu);
++    if (!menu || (!hasPad && !keyboard)) return;
 +
++    // Controller: the glyphs of the fixed menu buttons (A / B) and the page buttons' bindings (bumpers by default).
++    // Keyboard: keycaps of the keys bound to the left punch (OK), right punch (Back) and the page keys.
 +    struct Item {
-+        const char* button;   // glyph (SDL position name)
++        const char* button;   // controller glyph (SDL position name), or nullptr
++        int key;              // keyboard: the key's code (PunchOutControls), kUnbound for none
 +        uint32_t padBit;      // Wiimote_PadButtons bit: pressed look while held
 +        const char* label;    // text, or nullptr for an arrow
 +        int arrow;            // -1 left, +1 right
-+        const char* fallback; // text when the glyph file is missing
++        std::string fallback; // text when the glyph file is missing
 +        bool groupEnd;        // wider gap after it
 +    };
++    using namespace PunchOutControls;
 +    const bool ps = style == Style::PlayStation;
 +    const uint32_t bumpers = PunchOut_MenuBumpers();
-+    Item items[4];
-+    int count = 0;
-+    if (bumpers & 1u) items[count++] = {"leftshoulder", 0x100u, nullptr, -1, ps ? "L1" : "LB", !(bumpers & 2u)};
-+    if (bumpers & 2u) items[count++] = {"rightshoulder", 0x200u, nullptr, +1, ps ? "R1" : "RB", true};
-+    items[count++] = {"south", 0x10u, "OK", 0, ps ? "Cross" : "A", true};
-+    items[count++] = {"east", 0x20u, "Back", 0, ps ? "Circle" : "B", true};
++    std::vector<Item> items;
++    const auto add = [&](size_t control, const char* fixedGlyph, uint32_t bit, const char* label, int arrow,
++                         const std::string& fixedFallback, bool groupEnd) {
++        if (keyboard) {
++            const int key = FirstBinding(control, true);
++            if (key != kUnbound) items.push_back({nullptr, key, bit, label, arrow, "", groupEnd});
++            return;
++        }
++        if (fixedGlyph != nullptr) {
++            items.push_back({fixedGlyph, kUnbound, bit, label, arrow, fixedFallback, groupEnd});
++            return;
++        }
++        const int pad = FirstBinding(control, false);
++        if (pad == kUnbound) return;
++        items.push_back({PadGlyphName(pad), kUnbound, bit, label, arrow, PadName(pad), groupEnd});
++    };
++    if (bumpers & 1u) add(PagePrev, nullptr, 0x100u, nullptr, -1, "", !(bumpers & 2u));
++    if (bumpers & 2u) add(PageNext, nullptr, 0x200u, nullptr, +1, "", true);
++    add(One, "south", 0x10u, "OK", 0, ps ? "Cross" : "A", true);
++    add(Two, "east", 0x20u, "Back", 0, ps ? "Circle" : "B", true);
++    if (!items.empty() && !items.back().groupEnd) items.back().groupEnd = true;
++    const int count = static_cast<int>(items.size());
++    if (count == 0) return;
 +
 +    const ImGuiIO& io = ImGui::GetIO();
 +    const float H = io.DisplaySize.y;
@@ -30060,11 +31006,22 @@ index 0000000..186a07d
 +    const float arrowW = textSize * 0.62f;
 +    const float pad = icon * 0.35f, gap = icon * 0.25f, spacing = icon * 0.9f, small = icon * 0.4f;
 +    ImFont* font = BannerFont();
++    // Keycaps (keyboard): the key's name or an arrow on a cap in the glyphs' look; wide names widen the cap.
++    const float capText = icon * 0.40f;
++    const auto capLabel = [&](const Item& it, int& arrowKey) { return KeycapLabel(it.key, arrowKey); };
++    const auto capWidth = [&](const Item& it) {
++        int arrowKey = 0;
++        const std::string text = capLabel(it, arrowKey);
++        if (arrowKey != 0) return icon;
++        return std::max(icon, font->CalcTextSizeA(capText, FLT_MAX, 0.0f, text.c_str()).x + icon * 0.55f);
++    };
 +    const auto labelWidth = [&](const Item& it) {
 +        return it.label ? font->CalcTextSizeA(textSize, FLT_MAX, 0.0f, it.label).x : arrowW;
 +    };
 +    const auto glyphWidth = [&](const Item& it) {
-+        return GetGlyph(style, it.button).ok ? icon : font->CalcTextSizeA(textSize, FLT_MAX, 0.0f, it.fallback).x;
++        if (it.button == nullptr && it.key != kUnbound) return capWidth(it);
++        return it.button != nullptr && GetGlyph(style, it.button).ok
++                   ? icon : font->CalcTextSizeA(textSize, FLT_MAX, 0.0f, it.fallback.c_str()).x;
 +    };
 +
 +    // Measure.
@@ -30085,16 +31042,48 @@ index 0000000..186a07d
 +    const ImU32 white = IM_COL32(255, 255, 255, 235);
 +    for (int i = 0; i < count; ++i) {
 +        const Item& it = items[i];
-+        const Glyph& up = GetGlyph(style, it.button);
-+        const Glyph& down = GetGlyph(style, it.button, true);
-+        const Glyph& g = (held & it.padBit) != 0 && down.ok ? down : up; // the pressed look while held
-+        if (g.ok) {
-+            dl->AddImage(g.tex, ImVec2(x, cy - icon * 0.5f), ImVec2(x + icon, cy + icon * 0.5f));
-+            x += icon;
++        const bool down = (held & it.padBit) != 0;
++        if (it.button == nullptr && it.key != kUnbound) {
++            // Keycap: white rim, dark body, lighter top face (pushed in while held), then the name or an arrow.
++            const float w = capWidth(it), h = icon * 0.92f, r = h * 0.22f, rim = h * 0.07f;
++            const ImVec2 c0(x, cy - h * 0.5f), c1(x + w, cy + h * 0.5f);
++            dl->AddRectFilled(c0, c1, IM_COL32(255, 255, 255, 240), r);
++            dl->AddRectFilled(ImVec2(c0.x + rim, c0.y + rim), ImVec2(c1.x - rim, c1.y - rim), IM_COL32(44, 44, 46, 255),
++                              r - rim * 0.6f);
++            const float inset = h * 0.07f, push = down ? h * 0.08f : 0.f;
++            const ImVec2 t0(c0.x + rim + inset, c0.y + rim + inset * 0.6f + push);
++            const ImVec2 t1(c1.x - rim - inset, c1.y - rim - h * 0.16f + push);
++            dl->AddRectFilled(t0, t1, down ? IM_COL32(96, 96, 102, 255) : IM_COL32(70, 70, 74, 255), r * 0.7f);
++            const float tcx = (t0.x + t1.x) * 0.5f, tcy = (t0.y + t1.y) * 0.5f;
++            int arrowKey = 0;
++            const std::string text = capLabel(it, arrowKey);
++            if (arrowKey != 0) {
++                const float a = h * 0.17f;
++                ImVec2 v[3];
++                switch (arrowKey) {
++                case 1: v[0] = {tcx, tcy - a}; v[1] = {tcx - a, tcy + a * 0.7f}; v[2] = {tcx + a, tcy + a * 0.7f}; break;
++                case 2: v[0] = {tcx, tcy + a}; v[1] = {tcx + a, tcy - a * 0.7f}; v[2] = {tcx - a, tcy - a * 0.7f}; break;
++                case 3: v[0] = {tcx - a, tcy}; v[1] = {tcx + a * 0.7f, tcy + a}; v[2] = {tcx + a * 0.7f, tcy - a}; break;
++                default: v[0] = {tcx + a, tcy}; v[1] = {tcx - a * 0.7f, tcy - a}; v[2] = {tcx - a * 0.7f, tcy + a}; break;
++                }
++                dl->AddTriangleFilled(v[0], v[1], v[2], white);
++            } else {
++                const ImVec2 sz = font->CalcTextSizeA(capText, FLT_MAX, 0.0f, text.c_str());
++                dl->AddText(font, capText, ImVec2(tcx - sz.x * 0.5f, tcy - sz.y * 0.5f), white, text.c_str());
++            }
++            x += w;
 +        } else {
-+            const ImVec2 sz = font->CalcTextSizeA(textSize, FLT_MAX, 0.0f, it.fallback);
-+            dl->AddText(font, textSize, ImVec2(x, cy - sz.y * 0.5f), IM_COL32(255, 255, 255, 255), it.fallback);
-+            x += sz.x;
++            const Glyph& up = it.button != nullptr ? GetGlyph(style, it.button) : Glyph{};
++            const Glyph& pressed = it.button != nullptr ? GetGlyph(style, it.button, true) : Glyph{};
++            const Glyph& g = down && pressed.ok ? pressed : up; // the pressed look while held
++            if (g.ok) {
++                dl->AddImage(g.tex, ImVec2(x, cy - icon * 0.5f), ImVec2(x + icon, cy + icon * 0.5f));
++                x += icon;
++            } else {
++                const ImVec2 sz = font->CalcTextSizeA(textSize, FLT_MAX, 0.0f, it.fallback.c_str());
++                dl->AddText(font, textSize, ImVec2(x, cy - sz.y * 0.5f), IM_COL32(255, 255, 255, 255), it.fallback.c_str());
++                x += sz.x;
++            }
 +        }
 +        x += gap;
 +        if (it.label) {
@@ -63475,7 +64464,7 @@ index cd236a9..83a00f7 100644
      g_vi.hasValidXfb = true;
      g_vi.readyXfb = xfbAddr;
 diff --git a/runtime/src/main.cpp b/runtime/src/main.cpp
-index 56bec9f..cd98b80 100644
+index 56bec9f..a40eaad 100644
 --- a/runtime/src/main.cpp
 +++ b/runtime/src/main.cpp
 @@ -86,6 +86,7 @@
@@ -63508,7 +64497,7 @@ index 56bec9f..cd98b80 100644
          if (!g_headless && RuntimeConfigFile::DiscordPresenceEnabled()) {
 -            DiscordPresence::Initialize(RuntimeConfigFile::DiscordClientId(), "Mario Kart Wii");
 +            DiscordPresence::Initialize(RuntimeConfigFile::DiscordClientId(),
-+                                        GuestRegion::Current() == GuestRegion::Id::PunchOut ? "Fist-In!!" : "Mario Kart Wii");
++                                        GuestRegion::Current() == GuestRegion::Id::PunchOut ? "Re-Punched!!" : "Mario Kart Wii");
          }
          SystemBridge::Initialize();
          TranslatedFunctionRegistry::Finalize();
@@ -63518,7 +64507,7 @@ index 56bec9f..cd98b80 100644
          auroraConfig.appName = RuntimeProduct::Active().displayName.data();
 +        if (GuestRegion::Current() == GuestRegion::Id::PunchOut) {
 +            // Window title, taskbar name and icon (punchout_prompts.cpp).
-+            auroraConfig.appName = "Fist-In!!";
++            auroraConfig.appName = "Re-Punched!!";
 +            PunchOut_WindowIdentity(&auroraConfig.iconRGBA8, &auroraConfig.iconWidth, &auroraConfig.iconHeight);
 +        }
          const auto applicationDataDirectory = RuntimeConfigFile::ApplicationDataDirectory();
@@ -63551,7 +64540,7 @@ index ad031c1..c2538a5 100644
      uint32_t archivePlayer = 0;
      uint32_t soundPlayers = 0;
 diff --git a/runtime/src/settings_overlay.cpp b/runtime/src/settings_overlay.cpp
-index 6c2083a..1e05cd6 100644
+index 6c2083a..559bd29 100644
 --- a/runtime/src/settings_overlay.cpp
 +++ b/runtime/src/settings_overlay.cpp
 @@ -1,4 +1,5 @@
@@ -63560,7 +64549,15 @@ index 6c2083a..1e05cd6 100644
  #include "gx_worker.h"
  #include "audio_backend.h"
  #include "aurora_events.h"
-@@ -19,6 +20,7 @@
+@@ -8,6 +9,7 @@
+ #include "motion_trick.h"
+ #include "game_graphics_options.h"
+ #include "music_attenuation.h"
++#include "punchout_controls.h"
+ #include "runtime_config.h"
+ #include "runtime_log.h"
+ #include "wiimote_host.h"
+@@ -19,6 +21,7 @@
  #include <SDL3/SDL_mouse.h>
  #include <SDL3/SDL_scancode.h>
  #include <SDL3/SDL_timer.h>
@@ -63568,7 +64565,7 @@ index 6c2083a..1e05cd6 100644
  
  #include <array>
  #include <algorithm>
-@@ -91,6 +93,11 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
+@@ -91,6 +94,11 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
  bool g_audioMixWorker = RuntimeConfigFile::AudioMixWorkerEnabled(true);
  bool g_attenuateMusicWhenMediaPlays = RuntimeConfigFile::AttenuateMusicWhenMediaPlays(false);
  int g_frameInterpolationMode = [] {
@@ -63580,7 +64577,191 @@ index 6c2083a..1e05cd6 100644
      switch (RuntimeConfigFile::FrameInterpolationFps(0)) {
      case 120:
          return 1;
-@@ -1205,13 +1212,15 @@ void DrawGraphicsSettings() {
+@@ -435,7 +443,11 @@ const char* KeyBindingName(int scancode) {
+     }
+ }
+ 
+-enum class RebindKind { KeyboardButton, KeyboardAxis, Controller, MuteHotkey };
++// PunchOutKey / PunchOutPad: target = control * 4 + slot in PunchOutControls.
++enum class RebindKind { KeyboardButton, KeyboardAxis, Controller, MuteHotkey, PunchOutKey, PunchOutPad };
++bool IsPadRebind(RebindKind kind) {
++    return kind == RebindKind::Controller || kind == RebindKind::PunchOutPad;
++}
+ struct RebindState {
+     bool active = false;
+     bool openPopup = false;
+@@ -452,6 +464,8 @@ struct RebindState {
+     std::array<bool, SDL_GAMEPAD_AXIS_COUNT> axesReady{};
+ } g_rebind;
+ 
++extern "C" SDL_Gamepad* Wiimote_ActiveGamepad(); // wiimote/wiimote_emulated.cpp
++
+ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secondary = false) {
+     g_rebind = {};
+     g_rebind.active = true;
+@@ -467,8 +481,11 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+     std::copy_n(keys, std::min(count, static_cast<int>(g_rebind.keys.size())), g_rebind.keys.begin());
+     g_rebind.mouse = SDL_GetMouseState(nullptr, nullptr);
+     const int index = PADGetIndexForPort(g_rebind.port);
+-    if (kind == RebindKind::Controller && index >= 0) {
+-        if (auto* pad = PADGetSDLGamepadForIndex(index)) {
++    SDL_Gamepad* capturePad = kind == RebindKind::PunchOutPad ? Wiimote_ActiveGamepad()
++                              : kind == RebindKind::Controller && index >= 0 ? PADGetSDLGamepadForIndex(index)
++                                                                             : nullptr;
++    if (capturePad != nullptr) {
++        if (auto* pad = capturePad) {
+             g_rebind.instance = SDL_GetGamepadID(pad);
+             for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
+                 g_rebind.buttons[i] = SDL_GetGamepadButton(pad, static_cast<SDL_GamepadButton>(i));
+@@ -480,6 +497,12 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+ 
+ void CompleteRebind(uint32_t value) {
+     const auto& capture = g_rebind;
++    if (capture.kind == RebindKind::PunchOutKey || capture.kind == RebindKind::PunchOutPad) {
++        PunchOutControls::SetBinding(capture.target / PunchOutControls::kSlotCount,
++                                     capture.target % PunchOutControls::kSlotCount, static_cast<int>(value));
++        g_rebind.active = false;
++        return;
++    }
+     if (capture.kind == RebindKind::Controller) {
+         const int index = PADGetIndexForPort(capture.port);
+         auto* pad = index >= 0 ? PADGetSDLGamepadForIndex(index) : nullptr;
+@@ -526,13 +549,17 @@ void DrawRebindPrompt() {
+     }
+     if (g_rebind.active) {
+         ImGui::Text("Rebind: %s", g_rebind.label.c_str());
+-        ImGui::TextUnformatted(g_rebind.kind == RebindKind::Controller
++        ImGui::TextUnformatted(g_rebind.kind == RebindKind::PunchOutPad
++            ? "Press a controller button or pull a trigger."
++            : g_rebind.kind == RebindKind::Controller
+             ? "Press a controller button, pull a trigger, or move a stick."
+             : g_rebind.kind == RebindKind::MuteHotkey
+                 ? "Press a keyboard key."
+                 : "Press a keyboard key or click a mouse button.");
+-        ImGui::TextUnformatted("Release any held input first. Backspace or Delete clears the mapping.");
+-        ImGui::TextUnformatted("Escape can be bound. F10 is reserved for settings.");
++        ImGui::TextUnformatted(g_rebind.kind == RebindKind::PunchOutKey || g_rebind.kind == RebindKind::PunchOutPad
++            ? "Release any held input first." : "Release any held input first. Backspace or Delete clears the mapping.");
++        ImGui::TextUnformatted(g_rebind.kind == RebindKind::PunchOutKey
++            ? "Escape and F10 are reserved." : "Escape can be bound. F10 is reserved for settings.");
+         const float remaining = std::chrono::duration<float>(g_rebind.deadline - Clock::now()).count();
+         ImGui::Text("Unmapped in %d seconds", std::max(0, static_cast<int>(std::ceil(remaining))));
+         const bool clear = ImGui::Button("Clear mapping");
+@@ -540,22 +567,27 @@ void DrawRebindPrompt() {
+         if (ImGui::Button("Cancel")) g_rebind.active = false;
+         // UI clicks must not become mouse bindings (buttons activate on release).
+         const bool overControl = ImGui::IsAnyItemHovered();
++        const bool punchOutKind = g_rebind.kind == RebindKind::PunchOutKey || g_rebind.kind == RebindKind::PunchOutPad;
+         if (g_rebind.active && (clear || remaining <= 0.0f)) {
+-            CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
+-                                                                  : static_cast<uint32_t>(PAD_KEY_INVALID));
+-        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && g_rebind.kind != RebindKind::Controller) {
++            CompleteRebind(punchOutKind ? static_cast<uint32_t>(PunchOutControls::kUnbound)
++                           : g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
++                                                                     : static_cast<uint32_t>(PAD_KEY_INVALID));
++        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && !IsPadRebind(g_rebind.kind)) {
+             int count = 0;
+             const bool* keys = SDL_GetKeyboardState(&count);
+             for (int i = 1; i < std::min(count, static_cast<int>(SDL_SCANCODE_COUNT)) && g_rebind.active; ++i) {
+-                if (keys[i] && !g_rebind.keys[i] && i != SDL_SCANCODE_F10) CompleteRebind(i);
++                if (keys[i] && !g_rebind.keys[i] && i != SDL_SCANCODE_F10 &&
++                    !(punchOutKind && i == SDL_SCANCODE_ESCAPE)) CompleteRebind(i);
+                 g_rebind.keys[i] = keys[i];
+             }
+             const uint32_t mouse = SDL_GetMouseState(nullptr, nullptr);
+             for (int i = 1; i <= 5 && g_rebind.active; ++i)
+                 if (!overControl && g_rebind.kind != RebindKind::MuteHotkey &&
+-                    (mouse & ~g_rebind.mouse & (1u << (i - 1))) != 0) CompleteRebind(static_cast<uint32_t>(-i - 1));
++                    (mouse & ~g_rebind.mouse & (1u << (i - 1))) != 0)
++                    CompleteRebind(punchOutKind ? static_cast<uint32_t>(PunchOutControls::kMouseBase + i)
++                                                : static_cast<uint32_t>(-i - 1));
+             g_rebind.mouse = mouse;
+-        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && g_rebind.kind == RebindKind::Controller) {
++        } else if (g_rebind.active && SDL_GetKeyboardFocus() != nullptr && IsPadRebind(g_rebind.kind)) {
+             auto* pad = SDL_GetGamepadFromID(g_rebind.instance);
+             if (pad != nullptr) {
+                 for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
+@@ -566,8 +598,13 @@ void DrawRebindPrompt() {
+                 for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
+                     const int value = SDL_GetGamepadAxis(pad, static_cast<SDL_GamepadAxis>(i));
+                     if (std::abs(value) < 8000) g_rebind.axesReady[i] = true;
+-                    if (g_rebind.axesReady[i] && std::abs(value) >= 16384)
++                    const bool trigger = i == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || i == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
++                    if (g_rebind.kind == RebindKind::PunchOutPad) {
++                        if (trigger && g_rebind.axesReady[i] && value >= 16384)
++                            CompleteRebind(static_cast<uint32_t>(PunchOutControls::kTriggerBase + i));
++                    } else if (g_rebind.axesReady[i] && std::abs(value) >= 16384) {
+                         CompleteRebind(PADEncodeAxisButton(i, value < 0));
++                    }
+                 }
+             }
+         }
+@@ -1019,7 +1056,64 @@ void DrawPlayerRow(uint32_t port) {
+     ImGui::PopID();
+ }
+ 
++// Punch-Out!!: the emulated remote's bindings (keyboard, mouse buttons, controller) and the mouse lock.
++void DrawPunchOutControls() {
++    ImGui::Dummy(ImVec2(kControllerMenuWidth + 240.0f, 0.0f));
++    bool lock = PunchOutControls::LockMouse();
++    if (ImGui::Checkbox("Lock the mouse to the game window", &lock)) PunchOutControls::SetLockMouse(lock);
++    ImGui::TextDisabled("The mouse moves the pointer in menus: left click is A, right click is B.");
++    SDL_Gamepad* pad = Wiimote_ActiveGamepad();
++    const char* padName = pad != nullptr ? SDL_GetGamepadName(pad) : nullptr;
++    ImGui::TextDisabled("Controller: %s", pad == nullptr ? "none (keyboard only)"
++                                          : padName != nullptr ? padName : "connected");
++
++    ImGui::SeparatorText("Controls");
++    ImGui::TextDisabled("Click a box, then press the key or button. The left stick also moves.");
++    constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg;
++    if (ImGui::BeginTable("punchout_controls", 5, kFlags)) {
++        ImGui::TableSetupColumn("In a fight");
++        ImGui::TableSetupColumn("Key");
++        ImGui::TableSetupColumn("Key 2");
++        ImGui::TableSetupColumn("Controller");
++        ImGui::TableSetupColumn("Controller 2");
++        ImGui::TableHeadersRow();
++        for (size_t c = 0; c < PunchOutControls::kControlCount; ++c) {
++            ImGui::TableNextRow();
++            ImGui::TableNextColumn();
++            ImGui::AlignTextToFramePadding();
++            ImGui::Text("%s (%s)", PunchOutControls::ControlAction(c), PunchOutControls::ControlName(c));
++            for (size_t slot = 0; slot < PunchOutControls::kSlotCount; ++slot) {
++                ImGui::TableNextColumn();
++                const bool key = slot == PunchOutControls::Key1 || slot == PunchOutControls::Key2;
++                const int code = PunchOutControls::Binding(c, slot);
++                std::string name = key ? PunchOutControls::KeyName(code) : PunchOutControls::PadName(code);
++                if (name.empty()) name = "-";
++                ImGui::PushID(static_cast<int>(c * PunchOutControls::kSlotCount + slot));
++                if (ImGui::Button((name + "##bind").c_str(), ImVec2(key ? 110.0f : 130.0f, 0.0f))) {
++                    const std::string label = std::string(PunchOutControls::ControlAction(c)) +
++                                              (key ? " (keyboard)" : " (controller)");
++                    BeginRebind(key ? RebindKind::PunchOutKey : RebindKind::PunchOutPad,
++                                static_cast<uint16_t>(c * PunchOutControls::kSlotCount + slot), label.c_str());
++                }
++                ImGui::PopID();
++            }
++        }
++        ImGui::EndTable();
++    }
++    if (ImGui::Button("Reset to defaults")) PunchOutControls::ResetDefaults();
++    ImGui::TextDisabled("Menus: a controller's A chooses and B goes back; on the keyboard, the punch keys do.");
++    ImGui::TextDisabled("Escape opens the quit prompt.");
++
++    ImGui::Spacing();
++    DrawWiiRemoteSetup();
++    DrawRumbleSettings();
++}
++
+ void DrawControllerSettings() {
++    if (::GuestRegion::Current() == ::GuestRegion::Id::PunchOut) {
++        DrawPunchOutControls();
++        return;
++    }
+     ImGui::Dummy(ImVec2(kControllerMenuWidth, 0.0f));
+     for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
+         DrawPlayerRow(port);
+@@ -1205,13 +1299,15 @@ void DrawGraphicsSettings() {
              "Requests the closest native-resolution display mode to the output frame "
              "rate (60 Hz, or the frame interpolation target).");
      }
@@ -63597,7 +64778,7 @@ index 6c2083a..1e05cd6 100644
          for (int mode = 0; mode < static_cast<int>(kFrameInterpolationModes.size()); ++mode) {
              const bool selected = g_frameInterpolationMode == mode;
              if (ImGui::Selectable(kFrameInterpolationModes[static_cast<size_t>(mode)], selected)) {
-@@ -1235,9 +1244,11 @@ void DrawGraphicsSettings() {
+@@ -1235,9 +1331,11 @@ void DrawGraphicsSettings() {
              aurora_set_display_mode(AURORA_DISPLAY_MODE_EXCLUSIVE);
          }
      }
@@ -63612,16 +64793,16 @@ index 6c2083a..1e05cd6 100644
  #if defined(__APPLE__)
      const bool metalFxSupported = aurora_is_metalfx_spatial_supported();
      ImGui::BeginDisabled(!metalFxSupported);
-@@ -1390,7 +1401,7 @@ void DrawStartupScreen() {
+@@ -1390,7 +1488,7 @@ void DrawStartupScreen() {
                                          ImGuiWindowFlags_NoBringToFrontOnFocus;
      if (ImGui::Begin("Wiicompiled Startup", nullptr, kFlags)) {
          ImGui::SetWindowFontScale(1.25f);
 -        constexpr const char* kTitle = "WiiCompiled";
-+        const char* kTitle = ::GuestRegion::Current() == ::GuestRegion::Id::PunchOut ? "Fist-In!!" : "WiiCompiled";
++        const char* kTitle = ::GuestRegion::Current() == ::GuestRegion::Id::PunchOut ? "Re-Punched!!" : "WiiCompiled";
          const ImVec2 titleSize = ImGui::CalcTextSize(kTitle);
          const float titleX = std::max(0.0f, (viewport->Size.x - titleSize.x) * 0.5f);
          const float startY = std::max(0.0f, (viewport->Size.y - titleSize.y) * 0.5f);
-@@ -1458,6 +1469,8 @@ void DrawRestartPrompt() {
+@@ -1458,6 +1556,8 @@ void DrawRestartPrompt() {
      ImGui::EndPopup();
  }
  
@@ -63630,7 +64811,7 @@ index 6c2083a..1e05cd6 100644
  void DrawTopBar() {
      if (!g_topBarVisible) {
          return;
-@@ -1533,6 +1546,10 @@ void DrawTopBar() {
+@@ -1533,6 +1633,10 @@ void DrawTopBar() {
          ImGui::EndMenu();
      }
  
@@ -63641,18 +64822,18 @@ index 6c2083a..1e05cd6 100644
      const ImGuiStyle& style = ImGui::GetStyle();
      const float hideWidth = ImGui::CalcTextSize("Hide (F10)").x + style.FramePadding.x * 2.0f;
      const float exitWidth = ImGui::CalcTextSize("X").x + style.FramePadding.x * 2.0f;
-@@ -1578,8 +1595,26 @@ bool IsMouseActivity(const SDL_Event& event) {
+@@ -1578,8 +1682,26 @@ bool IsMouseActivity(const SDL_Event& event) {
  // Runs on the thread that pumps SDL events (the same one that calls Draw), so
  // the SDL cursor calls are safe here.
  void UpdateCursorAutoHide() {
 +    // Punch-Out!!: the game draws its own Wii Remote pointer (the mouse drives it), so while the
-+    // game has the focus the system cursor stays hidden and confined to the window. Opening the
-+    // F10 bar shows and frees it again.
++    // game has the focus the system cursor stays hidden over the window, and confined to it if
++    // "Lock the mouse" is on. Opening the F10 bar shows and frees it again.
 +    const bool punchOut = ::GuestRegion::Current() == ::GuestRegion::Id::PunchOut;
 +    if (punchOut) {
 +        static SDL_Window* grabbed = nullptr;
 +        SDL_Window* focus = SDL_GetKeyboardFocus();
-+        SDL_Window* wantGrab = g_topBarVisible ? nullptr : focus;
++        SDL_Window* wantGrab = g_topBarVisible || !PunchOutControls::LockMouse() ? nullptr : focus;
 +        if (wantGrab != grabbed) {
 +            if (grabbed != nullptr) {
 +                SDL_SetWindowMouseGrab(grabbed, false);
@@ -63669,7 +64850,19 @@ index 6c2083a..1e05cd6 100644
      if (shouldHide == g_cursorHidden) {
          return;
      }
-@@ -1713,6 +1748,10 @@ void ReleaseControllers() noexcept {
+@@ -1658,8 +1780,9 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+             continue;
+         }
+         controller_mapping_wizard::HandleSdlEvent(ev->sdl);
+-        if (g_rebind.active && (IsToggleKey(ev->sdl, SDL_SCANCODE_BACKSPACE) ||
+-                                IsToggleKey(ev->sdl, SDL_SCANCODE_DELETE))) {
++        // (Punch-Out!!'s controls can bind Backspace and Delete; their prompt clears with its button.)
++        if (g_rebind.active && g_rebind.kind != RebindKind::PunchOutKey && g_rebind.kind != RebindKind::PunchOutPad &&
++            (IsToggleKey(ev->sdl, SDL_SCANCODE_BACKSPACE) || IsToggleKey(ev->sdl, SDL_SCANCODE_DELETE))) {
+             CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
+                                                                   : static_cast<uint32_t>(PAD_KEY_INVALID));
+         }
+@@ -1713,6 +1836,10 @@ void ReleaseControllers() noexcept {
      if (queued) SDL_Delay(120);
  }
  
@@ -63680,7 +64873,7 @@ index 6c2083a..1e05cd6 100644
  void Draw() noexcept {
      // ImGui is only touched on this thread; the render worker replays a frozen copy.
      ApplyConfiguredMappings();
-@@ -1723,6 +1762,10 @@ void Draw() noexcept {
+@@ -1723,6 +1850,10 @@ void Draw() noexcept {
          DrawShaderCompilationStatus();
      }
      DrawFpsOverlay();
@@ -63747,15 +64940,244 @@ index 99f2abd..af051fe 100644
  
      if (mem1Size != 0) {
          const uint32_t mem1End = Memory::kMem1CachedBase + mem1Size;
+diff --git a/runtime/src/wiimote/punchout_controls.cpp b/runtime/src/wiimote/punchout_controls.cpp
+new file mode 100644
+index 0000000..02e31e9
+--- /dev/null
++++ b/runtime/src/wiimote/punchout_controls.cpp
+@@ -0,0 +1,222 @@
++#include "punchout_controls.h"
++
++#include "runtime_config.h"
++#include "runtime_log.h"
++
++#include <SDL3/SDL_gamepad.h>
++#include <SDL3/SDL_keyboard.h>
++#include <SDL3/SDL_mouse.h>
++#include <SDL3/SDL_scancode.h>
++#include <SDL3/SDL_stdinc.h>
++
++#include <array>
++#include <atomic>
++#include <iostream>
++
++namespace PunchOutControls {
++namespace {
++
++struct ControlInfo {
++    const char* name;
++    const char* action;
++    std::array<int, kSlotCount> defaults;
++};
++
++constexpr int U = kUnbound;
++
++// The default layout: WASD or the arrows to move, J / K to punch, L or Space for the star punch, Q / E to turn
++// menu pages.
++const std::array<ControlInfo, kControlCount> kControls = {{
++    {"Up", "Block (with a punch: punch to the face)", {SDL_SCANCODE_W, SDL_SCANCODE_UP, SDL_GAMEPAD_BUTTON_DPAD_UP, U}},
++    {"Down", "Duck", {SDL_SCANCODE_S, SDL_SCANCODE_DOWN, SDL_GAMEPAD_BUTTON_DPAD_DOWN, U}},
++    {"Left", "Dodge left", {SDL_SCANCODE_A, SDL_SCANCODE_LEFT, SDL_GAMEPAD_BUTTON_DPAD_LEFT, U}},
++    {"Right", "Dodge right", {SDL_SCANCODE_D, SDL_SCANCODE_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT, U}},
++    {"1", "Left punch", {SDL_SCANCODE_J, U, SDL_GAMEPAD_BUTTON_SOUTH, U}},
++    {"2", "Right punch", {SDL_SCANCODE_K, U, SDL_GAMEPAD_BUTTON_EAST, U}},
++    {"A", "Star punch", {SDL_SCANCODE_L, SDL_SCANCODE_SPACE, SDL_GAMEPAD_BUTTON_NORTH, U}},
++    {"B", "The remote's B", {U, U, SDL_GAMEPAD_BUTTON_WEST, U}},
++    {"+", "Pause", {SDL_SCANCODE_RETURN, U, SDL_GAMEPAD_BUTTON_START, U}},
++    {"-", "The remote's -", {SDL_SCANCODE_BACKSPACE, U, SDL_GAMEPAD_BUTTON_BACK, U}},
++    {"menus", "Previous page", {SDL_SCANCODE_Q, U, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, U}},
++    {"menus", "Next page", {SDL_SCANCODE_E, U, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, U}},
++}};
++
++std::array<std::atomic<int>, static_cast<size_t>(kControlCount) * kSlotCount> g_bindings;
++std::atomic<bool> g_loaded{false};
++std::atomic<bool> g_lockMouse{false};
++
++constexpr std::array<const char*, 5> kMouseNames = {"Mouse Left", "Mouse Middle", "Mouse Right", "Mouse Side 1",
++                                                    "Mouse Side 2"};
++
++bool IsKeySlot(size_t slot) {
++    return slot == Key1 || slot == Key2;
++}
++
++std::string KeyToConfig(int code) {
++    if (code == kUnbound) return "";
++    if (code > kMouseBase && code <= kMouseBase + 5) return kMouseNames[code - kMouseBase - 1];
++    if (code > SDL_SCANCODE_UNKNOWN && code < SDL_SCANCODE_COUNT) {
++        return SDL_GetScancodeName(static_cast<SDL_Scancode>(code));
++    }
++    return "";
++}
++
++std::string PadToConfig(int code) {
++    if (code == kUnbound) return "";
++    if (code == kTriggerBase + SDL_GAMEPAD_AXIS_LEFT_TRIGGER || code == kTriggerBase + SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
++        const char* s = SDL_GetGamepadStringForAxis(static_cast<SDL_GamepadAxis>(code - kTriggerBase));
++        return s != nullptr ? s : "";
++    }
++    if (code >= 0 && code < SDL_GAMEPAD_BUTTON_COUNT) {
++        const char* s = SDL_GetGamepadStringForButton(static_cast<SDL_GamepadButton>(code));
++        return s != nullptr ? s : "";
++    }
++    return "";
++}
++
++bool EqualsIgnoreCase(const std::string& a, const char* b) {
++    size_t i = 0;
++    for (; i < a.size() && b[i] != '\0'; ++i) {
++        if (SDL_tolower(static_cast<unsigned char>(a[i])) != SDL_tolower(static_cast<unsigned char>(b[i]))) return false;
++    }
++    return i == a.size() && b[i] == '\0';
++}
++
++// Returns kUnbound for "" and for names it doesn't know (with a log line).
++int ParseKey(const std::string& text) {
++    if (text.empty()) return kUnbound;
++    for (size_t i = 0; i < kMouseNames.size(); ++i) {
++        if (EqualsIgnoreCase(text, kMouseNames[i])) return kMouseBase + 1 + static_cast<int>(i);
++    }
++    const SDL_Scancode sc = SDL_GetScancodeFromName(text.c_str());
++    if (sc != SDL_SCANCODE_UNKNOWN) return sc;
++    RT_LOG(RT_TAG_HLE) << "[controls] Unknown key name \"" << text << "\" in [punchout_controls]" << std::endl;
++    return kUnbound;
++}
++
++int ParsePad(const std::string& text) {
++    if (text.empty()) return kUnbound;
++    const SDL_GamepadButton button = SDL_GetGamepadButtonFromString(text.c_str());
++    if (button != SDL_GAMEPAD_BUTTON_INVALID) return button;
++    const SDL_GamepadAxis axis = SDL_GetGamepadAxisFromString(text.c_str());
++    if (axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) return kTriggerBase + axis;
++    RT_LOG(RT_TAG_HLE) << "[controls] Unknown controller button \"" << text << "\" in [punchout_controls]" << std::endl;
++    return kUnbound;
++}
++
++void EnsureLoaded() {
++    if (!g_loaded.load(std::memory_order_acquire)) Reload();
++}
++
++bool KeyCodeHeld(int code) {
++    if (code == kUnbound) return false;
++    if (code > kMouseBase && code <= kMouseBase + 5) {
++        if (SDL_GetMouseFocus() == nullptr) return false;
++        return (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_MASK(code - kMouseBase)) != 0;
++    }
++    if (code <= SDL_SCANCODE_UNKNOWN || code >= SDL_SCANCODE_COUNT) return false;
++    int count = 0;
++    const bool* keys = SDL_GetKeyboardState(&count);
++    return keys != nullptr && code < count && keys[code];
++}
++
++bool PadCodeHeld(int code, SDL_Gamepad* gamepad) {
++    if (code == kUnbound || gamepad == nullptr) return false;
++    if (code >= kTriggerBase) {
++        return SDL_GetGamepadAxis(gamepad, static_cast<SDL_GamepadAxis>(code - kTriggerBase)) > 16384; // half pulled
++    }
++    return SDL_GetGamepadButton(gamepad, static_cast<SDL_GamepadButton>(code));
++}
++
++} // namespace
++
++void Reload() {
++    for (size_t c = 0; c < kControlCount; ++c) {
++        for (size_t s = 0; s < kSlotCount; ++s) {
++            const auto text = RuntimeConfigFile::PunchOutControl(c, s);
++            const int code = !text ? kControls[c].defaults[s] : IsKeySlot(s) ? ParseKey(*text) : ParsePad(*text);
++            g_bindings[c * kSlotCount + s].store(code, std::memory_order_relaxed);
++        }
++    }
++    g_lockMouse.store(RuntimeConfigFile::LockMouse(false), std::memory_order_relaxed);
++    g_loaded.store(true, std::memory_order_release);
++}
++
++int Binding(size_t control, size_t slot) {
++    if (control >= kControlCount || slot >= kSlotCount) return kUnbound;
++    EnsureLoaded();
++    return g_bindings[control * kSlotCount + slot].load(std::memory_order_relaxed);
++}
++
++void SetBinding(size_t control, size_t slot, int code) {
++    if (control >= kControlCount || slot >= kSlotCount) return;
++    EnsureLoaded();
++    g_bindings[control * kSlotCount + slot].store(code, std::memory_order_relaxed);
++    RuntimeConfigFile::SetPunchOutControl(control, slot, IsKeySlot(slot) ? KeyToConfig(code) : PadToConfig(code));
++}
++
++void ResetDefaults() {
++    for (size_t c = 0; c < kControlCount; ++c) {
++        for (size_t s = 0; s < kSlotCount; ++s) SetBinding(c, s, kControls[c].defaults[s]);
++    }
++}
++
++const char* ControlName(size_t control) {
++    return control < kControlCount ? kControls[control].name : "";
++}
++
++const char* ControlAction(size_t control) {
++    return control < kControlCount ? kControls[control].action : "";
++}
++
++std::string KeyName(int code) {
++    return KeyToConfig(code);
++}
++
++std::string PadName(int code) {
++    switch (code) {
++    case kUnbound: return "";
++    case SDL_GAMEPAD_BUTTON_SOUTH: return "A / Cross";
++    case SDL_GAMEPAD_BUTTON_EAST: return "B / Circle";
++    case SDL_GAMEPAD_BUTTON_WEST: return "X / Square";
++    case SDL_GAMEPAD_BUTTON_NORTH: return "Y / Triangle";
++    case SDL_GAMEPAD_BUTTON_BACK: return "Back / Share";
++    case SDL_GAMEPAD_BUTTON_GUIDE: return "Guide";
++    case SDL_GAMEPAD_BUTTON_START: return "Start / Options";
++    case SDL_GAMEPAD_BUTTON_LEFT_STICK: return "Left stick click";
++    case SDL_GAMEPAD_BUTTON_RIGHT_STICK: return "Right stick click";
++    case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: return "LB / L1";
++    case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return "RB / R1";
++    case SDL_GAMEPAD_BUTTON_DPAD_UP: return "D-pad up";
++    case SDL_GAMEPAD_BUTTON_DPAD_DOWN: return "D-pad down";
++    case SDL_GAMEPAD_BUTTON_DPAD_LEFT: return "D-pad left";
++    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT: return "D-pad right";
++    case SDL_GAMEPAD_BUTTON_TOUCHPAD: return "Touchpad";
++    case kTriggerBase + SDL_GAMEPAD_AXIS_LEFT_TRIGGER: return "LT / L2";
++    case kTriggerBase + SDL_GAMEPAD_AXIS_RIGHT_TRIGGER: return "RT / R2";
++    default: return PadToConfig(code);
++    }
++}
++
++bool KeyHeld(size_t control) {
++    if (control >= kControlCount || SDL_GetKeyboardFocus() == nullptr) return false;
++    return KeyCodeHeld(Binding(control, Key1)) || KeyCodeHeld(Binding(control, Key2));
++}
++
++bool PadHeld(size_t control, SDL_Gamepad* gamepad) {
++    if (control >= kControlCount || gamepad == nullptr) return false;
++    return PadCodeHeld(Binding(control, Pad1), gamepad) || PadCodeHeld(Binding(control, Pad2), gamepad);
++}
++
++bool LockMouse() {
++    EnsureLoaded();
++    return g_lockMouse.load(std::memory_order_relaxed);
++}
++
++void SetLockMouse(bool value) {
++    EnsureLoaded();
++    g_lockMouse.store(value, std::memory_order_relaxed);
++    RuntimeConfigFile::SetLockMouse(value);
++}
++
++} // namespace PunchOutControls
 diff --git a/runtime/src/wiimote/wiimote_emulated.cpp b/runtime/src/wiimote/wiimote_emulated.cpp
 new file mode 100644
-index 0000000..15ea83d
+index 0000000..7f5c151
 --- /dev/null
 +++ b/runtime/src/wiimote/wiimote_emulated.cpp
-@@ -0,0 +1,665 @@
+@@ -0,0 +1,711 @@
 +#include "wiimote_emulated.h"
 +
 +#include "input_bindings.h"
++#include "punchout_controls.h"
 +#include "runtime_config.h"
 +#include "runtime_log.h"
 +
@@ -63772,6 +65194,7 @@ index 0000000..15ea83d
 +#include <string>
 +#include <chrono>
 +#include <cmath>
++#include <cstdlib>
 +#include <cstdint>
 +#include <cstring>
 +#include <deque>
@@ -63878,20 +65301,37 @@ index 0000000..15ea83d
 +std::atomic<float> g_pointerY{0.f};
 +std::atomic<uint32_t> g_appliedWarp{0};
 +std::atomic<bool> g_remoteReady{false};
++std::atomic<int> g_lastInputDevice{0};        // 0 nothing pressed yet, 1 keyboard (or mouse buttons), 2 gamepad
 +std::atomic<uint32_t> g_userPointerMoves{0}; // right stick or mouse moved the pointer (shows the glove again)
 +
++// The remote's buttons from the keyboard, the mouse buttons and the gamepad (nullptr: keyboard and mouse only),
++// through the Punch-Out!! control bindings (punchout_controls.cpp). The left stick always works as the D-pad.
 +uint16_t ReadButtons(SDL_Gamepad* gamepad) {
-+    if (gamepad == nullptr || InputBindings::InputBlocked()) {
++    if (InputBindings::InputBlocked()) {
 +        return 0;
 +    }
-+    const auto held = [gamepad](SDL_GamepadButton button) { return SDL_GetGamepadButton(gamepad, button); };
-+    const auto axis = [gamepad](SDL_GamepadAxis a) { return static_cast<int>(SDL_GetGamepadAxis(gamepad, a)); };
++    using namespace PunchOutControls;
++    std::array<bool, kControlCount> keyHeld{}, padHeld{};
++    bool anyKey = false, anyPad = false;
++    for (size_t c = 0; c < kControlCount; ++c) {
++        keyHeld[c] = KeyHeld(c);
++        padHeld[c] = PadHeld(c, gamepad);
++        anyKey |= keyHeld[c];
++        anyPad |= padHeld[c];
++    }
++    const auto on = [&](size_t control) { return keyHeld[control] || padHeld[control]; };
++    const auto axis = [gamepad](SDL_GamepadAxis a) {
++        return gamepad != nullptr ? static_cast<int>(SDL_GetGamepadAxis(gamepad, a)) : 0;
++    };
 +    constexpr int kStick = 16384;  // half deflection
++    anyPad |= std::abs(axis(SDL_GAMEPAD_AXIS_LEFTX)) > kStick || std::abs(axis(SDL_GAMEPAD_AXIS_LEFTY)) > kStick;
++    // The in-game prompts show whatever was used last (punchout_prompts.cpp).
++    if (anyKey != anyPad) g_lastInputDevice.store(anyKey ? 1 : 2, std::memory_order_relaxed);
 +
-+    const bool up = held(SDL_GAMEPAD_BUTTON_DPAD_UP) || axis(SDL_GAMEPAD_AXIS_LEFTY) < -kStick;
-+    const bool down = held(SDL_GAMEPAD_BUTTON_DPAD_DOWN) || axis(SDL_GAMEPAD_AXIS_LEFTY) > kStick;
-+    const bool left = held(SDL_GAMEPAD_BUTTON_DPAD_LEFT) || axis(SDL_GAMEPAD_AXIS_LEFTX) < -kStick;
-+    const bool right = held(SDL_GAMEPAD_BUTTON_DPAD_RIGHT) || axis(SDL_GAMEPAD_AXIS_LEFTX) > kStick;
++    const bool up = on(Up) || axis(SDL_GAMEPAD_AXIS_LEFTY) < -kStick;
++    const bool down = on(Down) || axis(SDL_GAMEPAD_AXIS_LEFTY) > kStick;
++    const bool left = on(Left) || axis(SDL_GAMEPAD_AXIS_LEFTX) < -kStick;
++    const bool right = on(Right) || axis(SDL_GAMEPAD_AXIS_LEFTX) > kStick;
 +
 +    uint16_t buttons = 0;
 +    // Held sideways with the D-pad on the left, the remote's Up arrow points at the screen's left.
@@ -63899,12 +65339,12 @@ index 0000000..15ea83d
 +    if (down) buttons |= kLeft;
 +    if (left) buttons |= kUp;
 +    if (right) buttons |= kDown;
-+    if (held(SDL_GAMEPAD_BUTTON_SOUTH)) buttons |= kOne;
-+    if (held(SDL_GAMEPAD_BUTTON_EAST)) buttons |= kTwo;
-+    if (held(SDL_GAMEPAD_BUTTON_WEST)) buttons |= kB;
-+    if (held(SDL_GAMEPAD_BUTTON_NORTH)) buttons |= kA;
-+    if (held(SDL_GAMEPAD_BUTTON_START)) buttons |= kPlus;
-+    if (held(SDL_GAMEPAD_BUTTON_BACK)) buttons |= kMinus;
++    if (on(One)) buttons |= kOne;
++    if (on(Two)) buttons |= kTwo;
++    if (on(B)) buttons |= kB;
++    if (on(PunchOutControls::A)) buttons |= kA;
++    if (on(Plus)) buttons |= kPlus;
++    if (on(Minus)) buttons |= kMinus;
 +    // No HOME: there is no Wii menu to go back to.
 +    return buttons;
 +}
@@ -63913,12 +65353,12 @@ index 0000000..15ea83d
 +public:
 +    EmulatedRemote() { ResetLocked(); }
 +
-+    bool IsAttached() const { return FindGamepad() != nullptr || m_ready.load(); }
++    // The keyboard is always there, so the remote is too: a gamepad is optional.
++    bool IsAttached() const { return true; }
 +
 +    bool ConsumeWake() {
-+        if (FindGamepad() == nullptr) return false; // keep the wake for when a gamepad shows up
 +        if (m_wake.exchange(false)) return true;
-+        // After the game let the remote go, any button connects it again, like a real one.
++        // After the game let the remote go, any button (key or gamepad) connects it again, like a real one.
 +        if (m_ready.load() || !m_released.load()) return false;
 +        if (ReadButtons(FindGamepad()) != 0) {
 +            m_released = false;
@@ -63981,7 +65421,12 @@ index 0000000..15ea83d
 +            }
 +        }
 +        m_wasMenu = menu;
-+        if (m_mouseClick) buttons |= kA;
++        // The mouse buttons are A and B where the pointer is in use (menus, prompts), not in a fight, so a click
++        // never throws a star punch. (Mouse buttons bound in [punchout_controls] work everywhere.)
++        if (menu || IrMode() || PunchOut_MovieA()) {
++            if (m_mouseClick) buttons |= kA;
++            if (m_mouseRightClick) buttons |= kB;
++        }
 +        const bool changed = buttons != m_lastButtons;
 +        const bool streaming = m_continuous || m_mode != 0x30;
 +        if (!changed && !(streaming && now - m_lastReport >= kReportInterval) &&
@@ -64077,6 +65522,7 @@ index 0000000..15ea83d
 +            if (sx != 0.f || sy != 0.f) g_userPointerMoves.fetch_add(1, std::memory_order_relaxed);
 +        }
 +        m_mouseClick = false;
++        m_mouseRightClick = false;
 +        if (SDL_Window* window = SDL_GetMouseFocus()) {
 +            float mx = 0, my = 0;
 +            const SDL_MouseButtonFlags mouseButtons = SDL_GetMouseState(&mx, &my);
@@ -64090,6 +65536,7 @@ index 0000000..15ea83d
 +                    g_userPointerMoves.fetch_add(1, std::memory_order_relaxed);
 +                }
 +                m_mouseClick = (mouseButtons & SDL_BUTTON_LMASK) != 0 && !InputBindings::InputBlocked();
++                m_mouseRightClick = (mouseButtons & SDL_BUTTON_RMASK) != 0 && !InputBindings::InputBlocked();
 +            }
 +        }
 +        float warpX = 0, warpY = 0;
@@ -64302,6 +65749,7 @@ index 0000000..15ea83d
 +    float m_lastMouseX = -1.f;
 +    float m_lastMouseY = -1.f;
 +    bool m_mouseClick = false;
++    bool m_mouseRightClick = false;
 +    Clock::time_point m_lastPointerUpdate{};
 +    int m_outputLogs = 0;
 +    int m_buttonLogs = 0;
@@ -64382,6 +65830,15 @@ index 0000000..15ea83d
 +        if (SDL_SCANCODE_INSERT < keyCount && keys[SDL_SCANCODE_INSERT]) keyBits |= 1u << 10;
 +        if (SDL_SCANCODE_DELETE < keyCount && keys[SDL_SCANCODE_DELETE]) keyBits |= 1u << 11;
 +    }
++    // Keyboard menu navigation through the fight bindings: directions, 1 chooses, 2 goes back; the page keys turn
++    // pages like the bumpers.
++    {
++        using namespace PunchOutControls;
++        const size_t order[10] = {Up, Down, Left, Right, One, Two, B, PunchOutControls::A, PagePrev, PageNext};
++        for (int i = 0; i < 10; ++i) {
++            if (KeyHeld(order[i])) keyBits |= 1u << i;
++        }
++    }
 +    SDL_Gamepad* gamepad = Wiimote::FindGamepad();
 +    if (gamepad == nullptr) return keyBits;
 +    const auto held = [gamepad](SDL_GamepadButton button) { return SDL_GetGamepadButton(gamepad, button); };
@@ -64401,9 +65858,19 @@ index 0000000..15ea83d
 +    if (held(SDL_GAMEPAD_BUTTON_EAST)) bits |= 1u << 5;
 +    if (held(SDL_GAMEPAD_BUTTON_WEST)) bits |= 1u << 6;
 +    if (held(SDL_GAMEPAD_BUTTON_NORTH)) bits |= 1u << 7;
-+    if (held(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER)) bits |= 1u << 8;
-+    if (held(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER)) bits |= 1u << 9;
++    if (PunchOutControls::PadHeld(PunchOutControls::PagePrev, gamepad)) bits |= 1u << 8; // bumpers by default
++    if (PunchOutControls::PadHeld(PunchOutControls::PageNext, gamepad)) bits |= 1u << 9;
 +    return bits | keyBits;
++}
++
++// The gamepad that drives the emulated remote (for the F10 rebind prompt), or nullptr.
++extern "C" SDL_Gamepad* Wiimote_ActiveGamepad() {
++    return Wiimote::FindGamepad();
++}
++
++// What the player pressed last: 0 nothing yet, 1 keyboard, 2 gamepad (the in-game prompts follow it).
++extern "C" int Wiimote_LastInputDevice() {
++    return Wiimote::g_lastInputDevice.load(std::memory_order_relaxed);
 +}
 +
 +extern "C" uint32_t Wiimote_UserPointerMoves() {
