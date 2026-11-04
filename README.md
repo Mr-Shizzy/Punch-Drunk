@@ -4,7 +4,7 @@
 
 ### A Punch-Out!! (Wii, 2009) PC recompilation
 
-A fan-made PC port of **Punch-Out!!** (Wii, 2009) and **Doc Louis's Punch-Out!!** (WiiWare, 2008), built with the
+A fan-made PC port of **Punch-Out!!** (Wii, 2009) and **Doc Louis's Punch-Out!!** (WiiWare, 2009), built with the
 [WiiCompiled](https://github.com/patchzyy/wiicompiled) static recompiler. Play with a controller or the keyboard, at any
 resolution, with built-in [Archipelago](https://archipelago.gg) multiworld support (Punch-Out!!).
 
