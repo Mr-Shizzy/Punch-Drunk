@@ -94,9 +94,27 @@ function renderSetup(s) {
   $('install-tools').disabled = s.busy || s.running;
   $('copy-tool-command').hidden = !s.tools.hint;
   $('tool-command').textContent = s.tools.hint || '';
-  // Disc.
-  $('disc-path').textContent = s.disc || (s.extracted ? 'Already extracted' : 'No disc chosen');
-  $('step-2-state').textContent = s.extracted ? 'Extracted' : s.disc ? 'Chosen' : '';
+  // The game's copy: Punch-Out!!'s disc, or Doc Louis's from Dolphin.
+  const doc = s.game === 'doclouis';
+  $('copy-punchout').hidden = doc;
+  $('copy-doclouis').hidden = !doc;
+  $('step-2').querySelector('.step-title').textContent = doc ? 'Your copy' : 'Your disc';
+  $('build-note').textContent = doc
+    ? "Copies the game from Dolphin and builds it. The first build takes a while; later ones are quicker."
+    : 'Extracts your disc and builds the game. The first build takes a while; later ones are quicker.';
+  if (doc) {
+    $('doc-path').textContent = s.doc || 'Not found in Dolphin';
+    $('step-2-state').textContent = s.doc ? 'Found in Dolphin' : s.extracted ? 'Copied' : '';
+  } else {
+    $('disc-path').textContent = s.disc || (s.extracted ? 'Already extracted' : 'No disc chosen');
+    $('step-2-state').textContent = s.extracted ? 'Extracted' : s.disc ? 'Chosen' : '';
+  }
+  // Game tiles.
+  for (const id of ['punchout', 'doclouis']) {
+    const tile = $(`game-${id}`);
+    tile.classList.toggle('selected', s.game === id);
+    tile.disabled = s.busy || s.running;
+  }
   // Build.
   $('step-3-state').textContent = s.build.built ? (s.build.outdated ? 'Update available' : 'Built') : '';
   $('build').textContent = s.build.built ? 'Rebuild' : 'Build';
@@ -110,11 +128,12 @@ function renderLaunch(s) {
   const ready = s.step === 0;
   $('play').disabled = !ready || s.busy || s.running;
   $('play').textContent = s.running ? 'Playing' : 'Play';
-  $('launch-title').textContent = s.running ? 'Re-Punched!! is running' : ready ? 'Ready to play' : 'Not ready yet';
+  const name = s.games?.[s.game]?.name || 'Re-Punched!!';
+  $('launch-title').textContent = s.running ? `${name} is running` : ready ? `Ready to play ${name}` : 'Not ready yet';
   $('launch-detail').textContent = s.running ? 'Close the game to come back here.'
     : ready ? (s.build.at ? `Built ${new Date(s.build.at).toLocaleString()}` : '') : 'Finish the setup above.';
   const ap = s.settings.archipelago;
-  $('ap-badge').hidden = !ap.enabled;
+  $('ap-badge').hidden = !ap.enabled || s.game !== 'punchout'; // Archipelago is Punch-Out!!'s only
   $('ap-badge').classList.toggle('connected', Boolean(ap.connected));
   $('ap-badge-text').textContent = ap.connected ? `Archipelago: connected as ${ap.slot}` : `Archipelago: ${ap.slot || 'on'} (connects in the game)`;
   $('stop').hidden = !(s.busy || s.running);
@@ -351,6 +370,15 @@ $('choose-disc-folder').addEventListener('click', () => guarded(async () => {
   const r = await api.chooseDiscFolder();
   if (r && !r.ok && !r.canceled) { $('disc-error').textContent = r.problem; $('disc-error').hidden = false; }
 }));
+for (const id of ['punchout', 'doclouis']) {
+  $(`game-${id}`).addEventListener('click', () => guarded(async () => { $('disc-error').hidden = true; render(await api.selectGame(id)); }));
+}
+$('choose-doc-folder').addEventListener('click', () => guarded(async () => {
+  $('disc-error').hidden = true;
+  const r = await api.chooseDocFolder();
+  if (r && !r.ok && !r.canceled) { $('disc-error').textContent = r.problem; $('disc-error').hidden = false; }
+}));
+$('doc-recheck').addEventListener('click', () => guarded(async () => { $('disc-error').hidden = true; render(await api.state()); }));
 $('build').addEventListener('click', () => guarded(() => api.build()));
 $('rebuild').addEventListener('click', () => guarded(async () => { showPage('play'); await api.build(); }));
 $('play').addEventListener('click', () => guarded(() => api.play()));

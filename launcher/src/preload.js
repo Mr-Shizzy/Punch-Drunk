@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('launcher', {
   installTools: () => ipcRenderer.invoke('install-tools'),
   chooseDisc: () => ipcRenderer.invoke('choose-disc'),
   chooseDiscFolder: () => ipcRenderer.invoke('choose-disc-folder'),
+  selectGame: game => ipcRenderer.invoke('select-game', game),
+  chooseDocFolder: () => ipcRenderer.invoke('choose-doc-folder'),
   chooseFolder: which => ipcRenderer.invoke('choose-folder', which),
   choosePatchFile: () => ipcRenderer.invoke('choose-patch-file'),
   build: () => ipcRenderer.invoke('build'),

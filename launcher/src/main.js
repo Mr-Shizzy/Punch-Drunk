@@ -1,9 +1,10 @@
 'use strict';
 
-// Re-Punched!! Launcher: main process. Sets up the port on the player's own computer from their own disc
-// (checks the build tools, validates and extracts the disc with nodtool, builds the port with
-// scripts/build_port.sh, or scripts/build_port.ps1 on Windows), then launches it. Settings live in the port's own Config.toml, so the game's F10 menu and
-// the launcher always agree.
+// Re-Punched!! Launcher: main process. Sets up the ports on the player's own computer from their own copies (checks
+// the build tools; Punch-Out!!: validates and extracts the disc with nodtool; Doc Louis's Punch-Out!!: collects the
+// title from Dolphin's Wii storage), builds a port with scripts/build_port.sh, or scripts/build_port.ps1 on Windows,
+// then launches it. Settings live in Punch-Out!!'s Config.toml, so the game's F10 menu and the launcher always
+// agree; Doc Louis's reads the shared ones (controls, graphics, sound, button prompts) from there too.
 
 const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
 const { spawn, execFile } = require('node:child_process');
@@ -23,6 +24,14 @@ const NODTOOL = {
   version: 'v2.0.0-alpha.10',
   'linux-x64': { asset: 'nodtool-linux-x86_64', sha256: 'f853b83268b9542faf0d28815bc3a23c090ae28ebf397e46f99cbb08122c8307' },
   'win32-x64': { asset: 'nodtool-windows-x86_64.exe', sha256: '1e150e33b88157527f96caea89ad12267aed8b117180c9ebaa89ebe89c1d948d' }
+};
+// Doc Louis's Punch-Out!! (WiiWare, USA): title 00010001-57504345 as Dolphin installs it (decrypted contents), and
+// the sha256 of its game code (content 1).
+const DOC_TITLE = ['00010001', '57504345'];
+const DOC_DOL_SHA256 = '3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb';
+const GAMES = {
+  punchout: { name: 'Punch-Out!!', binary: 'RePunched' },
+  doclouis: { name: "Doc Louis's Punch-Out!!", binary: 'DocLouis' }
 };
 const IS_WIN = process.platform === 'win32';
 const EXE = IS_WIN ? '.exe' : '';
@@ -88,6 +97,17 @@ const paths = () => {
     port: path.join(root, 'port'),
     logs: path.join(root, 'logs'),
     gameConfig: path.join(root, 'port', 'UserData', 'Config.toml')
+  };
+};
+// The selected game, and its folders. Punch-Out!!'s are the ones above (its Config.toml holds the shared settings).
+const currentGame = () => (Object.hasOwn(GAMES, config.game) ? config.game : 'punchout');
+const gamePaths = (game = currentGame()) => {
+  const p = paths();
+  if (game === 'punchout') return { data: p.disc, work: p.work, port: p.port, logs: p.logs, config: p.gameConfig };
+  return {
+    data: path.join(p.root, 'doclouis', 'title'), work: path.join(p.root, 'work-doclouis'),
+    port: path.join(p.root, 'port-doclouis'), logs: path.join(p.logs, 'doclouis'),
+    config: path.join(p.root, 'port-doclouis', 'UserData', 'Config.toml')
   };
 };
 // The port's own files (the WiiCompiled patch and the Punch-Out project): bundled with the launcher, or a folder
@@ -339,6 +359,104 @@ async function extractDisc() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Doc Louis's Punch-Out!!: the title, from Dolphin's Wii storage (Tools > Install WAD puts it there, decrypted)
+
+// Dolphin's Wii folder: the usual places for a normal install and the Flatpak on Linux, Documents or AppData on
+// Windows.
+function dolphinWiiFolders() {
+  const home = os.homedir();
+  if (IS_WIN) {
+    return [path.join(app.getPath('documents'), 'Dolphin Emulator', 'Wii'),
+      path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Dolphin Emulator', 'Wii')];
+  }
+  const xdg = process.env.XDG_DATA_HOME || path.join(home, '.local', 'share');
+  return [...new Set([path.join(xdg, 'dolphin-emu', 'Wii'), path.join(home, '.local', 'share', 'dolphin-emu', 'Wii'),
+    path.join(home, '.var', 'app', 'org.DolphinEmu.dolphin-emu', 'data', 'dolphin-emu', 'Wii'),
+    path.join(home, '.dolphin-emu', 'Wii')])];
+}
+// Where the title's files are: its folder (content/title.tmd, content/*.app), the shared contents (shared1: content.map
+// and *.app) and the ticket. From a Wii folder, a Dolphin user folder holding one, or the title's own folder.
+function docTitleAt(dir) {
+  if (!dir) return null;
+  const has = p => fs.existsSync(p);
+  for (const wii of [dir, path.join(dir, 'Wii')]) {
+    const title = path.join(wii, 'title', ...DOC_TITLE);
+    if (has(path.join(title, 'content', 'title.tmd'))) {
+      return { title, shared: path.join(wii, 'shared1'), ticket: path.join(wii, 'ticket', DOC_TITLE[0], `${DOC_TITLE[1]}.tik`), from: wii };
+    }
+  }
+  if (has(path.join(dir, 'content', 'title.tmd'))) {
+    // The title folder itself: shared contents next to it in its Wii folder, or copied into it (content.map + .app).
+    const wii = path.join(dir, '..', '..', '..');
+    const shared = has(path.join(wii, 'shared1', 'content.map')) ? path.join(wii, 'shared1') : dir;
+    const ticket = [path.join(wii, 'ticket', DOC_TITLE[0], `${DOC_TITLE[1]}.tik`), path.join(dir, `${DOC_TITLE[1]}.tik`), path.join(dir, 'title.tik')]
+      .find(has) || '';
+    return { title: dir, shared, ticket, from: dir };
+  }
+  return null;
+}
+function docSource() {
+  return docTitleAt(config.docFolder) || dolphinWiiFolders().map(docTitleAt).find(Boolean) || null;
+}
+
+function docReady() {
+  try {
+    const info = JSON.parse(fs.readFileSync(path.join(gamePaths('doclouis').data, '..', 'collected.json'), 'utf8'));
+    return info.dolSha256 === DOC_DOL_SHA256 && fs.existsSync(path.join(gamePaths('doclouis').data, '00000001.app'));
+  } catch { return false; }
+}
+
+// Copies the title's contents into doclouis/title as title.tmd + <content id>.app (what the game's ES reads), each
+// checked against the hash in its title.tmd. Shared contents are found in shared1/content.map by that hash.
+async function collectDocTitle() {
+  const src = docSource();
+  if (!src) throw new Error("Doc Louis's Punch-Out!! wasn't found in Dolphin. Install it there first (Tools > Install WAD), or choose its folder.");
+  setTask({ label: "Getting Doc Louis's Punch-Out!! from Dolphin", detail: src.from, percent: null });
+  const out = gamePaths('doclouis').data;
+  const tmd = await fsp.readFile(path.join(src.title, 'content', 'title.tmd'));
+  const count = tmd.readUInt16BE(0x1DE);
+  const shared = new Map();
+  try {
+    const map = await fsp.readFile(path.join(src.shared, 'content.map'));
+    for (let i = 0; i + 28 <= map.length; i += 28) {
+      shared.set(map.subarray(i + 8, i + 28).toString('hex'), path.join(src.shared, map.subarray(i, i + 8).toString('latin1') + '.app'));
+    }
+  } catch { /* no shared contents */ }
+  await fsp.rm(out, { recursive: true, force: true });
+  await fsp.mkdir(out, { recursive: true });
+  await fsp.writeFile(path.join(out, 'title.tmd'), tmd);
+  for (let i = 0; i < count; i++) {
+    const r = 0x1E4 + 36 * i;
+    const cid = tmd.readUInt32BE(r), index = tmd.readUInt16BE(r + 4), type = tmd.readUInt16BE(r + 6);
+    const size = Number(tmd.readBigUInt64BE(r + 8)), sha1 = tmd.subarray(r + 16, r + 36).toString('hex');
+    const name = cid.toString(16).padStart(8, '0') + '.app';
+    let file = path.join(src.title, 'content', name);
+    if (type & 0x8000) file = shared.get(sha1) || file;
+    let data = null;
+    try { data = await fsp.readFile(file); } catch { /* missing */ }
+    if (!data || data.length < size || crypto.createHash('sha1').update(data.subarray(0, size)).digest('hex') !== sha1) {
+      throw new Error(`Doc Louis's Punch-Out!! in Dolphin is incomplete or damaged (content ${index}, ${name}). Reinstall it in Dolphin.`);
+    }
+    await fsp.writeFile(path.join(out, name), data.subarray(0, size)); // (a content's size; any padding dropped)
+  }
+  if (src.ticket && fs.existsSync(src.ticket)) await fsp.copyFile(src.ticket, path.join(out, 'title.tik'));
+  const dol = path.join(out, '00000001.app');
+  const dolSha256 = fs.existsSync(dol) ? await sha256(dol) : '';
+  if (dolSha256 !== DOC_DOL_SHA256) throw new Error("That's a version of Doc Louis's Punch-Out!! the port doesn't support yet (it needs the USA release, WPCE01).");
+  await fsp.writeFile(path.join(out, '..', 'collected.json'), JSON.stringify({ from: src.from, dolSha256, at: new Date().toISOString() }, null, 2));
+}
+
+// Doc Louis's own Config.toml: where its title is. Everything shared it reads from Punch-Out!!'s (see above).
+function ensureDocConfig() {
+  const file = gamePaths('doclouis').config;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  let text = '';
+  try { text = fs.readFileSync(file, 'utf8'); } catch { /* new */ }
+  text = toml.set(text, 'paths', 'title_content', gamePaths('doclouis').data);
+  fs.writeFileSync(file, text);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Building and playing
 
 function spawnLogged(cmd, args, opts, onLine) {
@@ -376,37 +494,44 @@ function stopChild() {
   else child.kill('SIGINT');
 }
 
-function buildInfoFile() { return path.join(paths().port, 'launcher-build.json'); }
+function buildInfoFile(game = currentGame()) { return path.join(gamePaths(game).port, 'launcher-build.json'); }
 async function portSourceHash() {
   const src = portSource();
   return src ? (await sha256(path.join(src, 'punchout_region.patch'))).slice(0, 16) : null;
 }
-async function buildState() {
-  const p = paths();
-  const binary = path.join(p.port, 'RePunched' + EXE);
+async function buildState(game = currentGame()) {
+  const binary = path.join(gamePaths(game).port, GAMES[game].binary + EXE);
   let info = null;
-  try { info = JSON.parse(fs.readFileSync(buildInfoFile(), 'utf8')); } catch { /* not built */ }
+  try { info = JSON.parse(fs.readFileSync(buildInfoFile(game), 'utf8')); } catch { /* not built */ }
   const built = fs.existsSync(binary) && info != null;
   const current = await portSourceHash();
   return { built, binary, info, outdated: built && current && info.patch !== current };
 }
 
 async function build() {
-  const p = paths();
+  const game = currentGame();
+  const p = gamePaths(game);
   const src = portSource();
   if (!src) throw new Error("The port's files weren't found. Choose them in Settings > Advanced.");
   const tools = await checkTools(true);
   if (!tools.ok) throw new Error(`Missing build tools: ${tools.missing.join(', ')}.`);
-  if (!await discExtracted()) await extractDisc();
+  if (game === 'punchout' && !await discExtracted()) await extractDisc();
+  if (game === 'doclouis') await collectDocTitle(); // quick: a few MB, and picks up a reinstall in Dolphin
   await fsp.mkdir(p.logs, { recursive: true });
   const steps = { total: 7, at: 0 };
-  setTask({ label: 'Building Re-Punched!!', detail: 'Starting', percent: 0 });
-  const env = { ...process.env, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.disc, PO_PORT: p.port, PO_LOGS: p.logs, NINJA_STATUS: '[%f/%t] ' };
+  const label = `Building ${GAMES[game].name}`;
+  setTask({ label, detail: 'Starting', percent: 0 });
+  // The other game's WiiCompiled clone, if there is one, is copied instead of downloading it again.
+  const other = gamePaths(game === 'punchout' ? 'doclouis' : 'punchout');
+  const seed = path.join(other.work, 'wiicompiled');
+  const env = { ...process.env, PO_GAME: game, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.data, PO_PORT: p.port, PO_LOGS: p.logs,
+    NINJA_STATUS: '[%f/%t] ', ...(fs.existsSync(path.join(seed, '.git')) ? { PO_SEED: seed } : {}) };
   let cmd = 'bash', args = [buildScript()], buildLog = null;
   if (IS_WIN) {
     // build_port.sh writes its own build.log; on Windows the launcher keeps it.
     const t = winTools();
-    Object.assign(env, { PO_GIT: t.git, PO_DOTNET: t.dotnet });
+    // One compiler / CMake / Ninja download for both games (Punch-Out!!'s work folder, where it always was).
+    Object.assign(env, { PO_GIT: t.git, PO_DOTNET: t.dotnet, PO_TOOLCHAIN: path.join(paths().work, 'toolchain') });
     cmd = 'powershell.exe';
     args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', buildScript()];
     buildLog = fs.createWriteStream(path.join(p.logs, 'build.log'));
@@ -417,19 +542,19 @@ async function build() {
     const step = /^@@STEP (\d+)\/(\d+) (.*)$/.exec(line);
     if (step) {
       steps.at = Number(step[1]); steps.total = Number(step[2]);
-      setTask({ label: 'Building Re-Punched!!', detail: step[3], percent: Math.round(((steps.at - 1) / steps.total) * 100) });
+      setTask({ label, detail: step[3], percent: Math.round(((steps.at - 1) / steps.total) * 100) });
       return;
     }
     const ninja = /^\[(\d+)\/(\d+)\]/.exec(line);
     if (ninja && steps.at > 0) {
       const frac = Number(ninja[1]) / Math.max(1, Number(ninja[2]));
-      setTask({ label: 'Building Re-Punched!!', detail: `Compiling ${ninja[1]} of ${ninja[2]}`, percent: Math.round(((steps.at - 1 + frac) / steps.total) * 100) });
+      setTask({ label, detail: `Compiling ${ninja[1]} of ${ninja[2]}`, percent: Math.round(((steps.at - 1 + frac) / steps.total) * 100) });
     }
   });
   } finally {
     if (buildLog) buildLog.end();
   }
-  await fsp.writeFile(buildInfoFile(), JSON.stringify({ patch: await portSourceHash(), at: new Date().toISOString(), source: src }, null, 2));
+  await fsp.writeFile(buildInfoFile(game), JSON.stringify({ patch: await portSourceHash(), at: new Date().toISOString(), source: src }, null, 2));
 }
 
 // Linux desktops (GNOME on Wayland in particular) take a window's taskbar icon and name from the desktop entry whose
@@ -453,17 +578,19 @@ function writeGameDesktopEntry(binary) {
 }
 
 async function play() {
-  const state = await buildState();
+  const game = currentGame();
+  const state = await buildState(game);
   if (!state.built) throw new Error('Build the port first.');
-  const p = paths();
-  ensureGameConfig();
-  writeGameDesktopEntry(state.binary);
+  const p = gamePaths(game);
+  ensureGameConfig(); // Punch-Out!!'s: also where Doc Louis's reads the shared settings
+  if (game === 'doclouis') ensureDocConfig();
+  else writeGameDesktopEntry(state.binary);
   gameRunning = true;
   send('state-changed');
   const logFile = path.join(p.logs, 'game.log');
   await fsp.mkdir(p.logs, { recursive: true });
   const out = fs.createWriteStream(logFile);
-  setTask({ label: 'Playing Re-Punched!!', detail: 'Close the game to come back here', percent: null });
+  setTask({ label: `Playing ${GAMES[game].name}`, detail: 'Close the game to come back here', percent: null });
   const watcher = setInterval(() => send('state-changed'), 2000); // the Archipelago checkmark follows the game
   try {
     await spawnLogged(state.binary, [], { cwd: p.port, windowsHide: false }, line => out.write(line + '\n'));
@@ -579,13 +706,18 @@ function writeGameSettings(s) {
 // State for the renderer
 
 async function state() {
+  const game = currentGame();
   const tools = await checkTools();
-  const extracted = await discExtracted();
-  const b = await buildState();
-  const step = !tools.ok ? 1 : !(config.disc || extracted) ? 2 : !b.built ? 3 : 0;
+  const extracted = game === 'punchout' ? await discExtracted() : docReady();
+  const b = await buildState(game);
+  const doc = game === 'doclouis' ? docSource() : null;
+  const haveCopy = game === 'punchout' ? Boolean(config.disc || extracted) : Boolean(doc || extracted);
+  const step = !tools.ok ? 1 : !haveCopy ? 2 : !b.built ? 3 : 0;
   return {
+    game, games: Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, { name: g.name, built: fs.existsSync(path.join(gamePaths(id).port, g.binary + EXE)) }])),
     step, tools, extracted,
     disc: config.disc || config.discFolder || null,
+    doc: doc ? doc.from : null, dolphinFolders: dolphinWiiFolders(),
     build: { built: b.built, outdated: Boolean(b.outdated), at: b.info?.at || null },
     portSource: portSource(),
     dataRoot: dataRoot(),
@@ -649,13 +781,32 @@ function registerHandlers() {
     const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Archipelago patch', extensions: ['appunchout'] }] });
     return r.canceled ? null : r.filePaths[0];
   });
+  ipcMain.handle('select-game', (_e, game) => {
+    if (!Object.hasOwn(GAMES, game) || child) return state();
+    config.game = game;
+    saveConfig();
+    return state();
+  });
+  // Doc Louis's: Dolphin's Wii folder (or its user folder, or the title's own folder) when it isn't found by itself.
+  ipcMain.handle('choose-doc-folder', async () => {
+    const r = await dialog.showOpenDialog(win, { title: "Choose Dolphin's Wii folder", properties: ['openDirectory'] });
+    if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
+    if (!docTitleAt(r.filePaths[0])) {
+      return { ok: false, problem: "Doc Louis's Punch-Out!! isn't in that folder. Choose Dolphin's Wii folder (it holds title and shared1)." };
+    }
+    config.docFolder = r.filePaths[0];
+    saveConfig();
+    send('state-changed');
+    return { ok: true };
+  });
   ipcMain.handle('build', exclusive(build));
   ipcMain.handle('play', exclusive(play));
   ipcMain.handle('stop', () => stopChild());
   ipcMain.handle('save-settings', (_e, s) => { writeGameSettings(s); return readGameSettings(); });
   ipcMain.handle('open-folder', (_e, which) => {
     const p = paths();
-    const dir = { logs: p.logs, port: p.port, data: p.root }[which] || p.root;
+    const g = gamePaths();
+    const dir = { logs: g.logs, port: g.port, data: p.root }[which] || p.root;
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
   });

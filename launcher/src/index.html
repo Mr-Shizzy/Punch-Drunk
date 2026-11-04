@@ -35,15 +35,15 @@
           <span class="game-title">Punch-Out!!</span>
           <span class="game-sub">Wii · USA</span>
         </button>
-        <div class="game-tile disabled" aria-disabled="true" title="Not available yet">
+        <button class="game-tile" id="game-doclouis" tabindex="0">
           <span class="game-title">Doc Louis's Punch-Out!!</span>
-          <span class="game-sub">Coming later</span>
-        </div>
+          <span class="game-sub">WiiWare · USA</span>
+        </button>
       </div>
 
       <div class="card" id="setup">
         <h2 id="setup-title">Set up Re-Punched!!</h2>
-        <p class="muted" id="setup-intro">Bring your own disc: the port is built on this computer from your copy of the game. No game data is included.</p>
+        <p class="muted" id="setup-intro">Bring your own copy: the port is built on this computer from your copy of the game. No game data is included.</p>
         <ol class="steps">
           <li class="step" id="step-1">
             <div class="step-head"><span class="step-num">1</span><span class="step-title">Build tools</span><span class="step-state" id="step-1-state"></span></div>
@@ -64,16 +64,23 @@
           <li class="step" id="step-2">
             <div class="step-head"><span class="step-num">2</span><span class="step-title">Your disc</span><span class="step-state" id="step-2-state"></span></div>
             <div class="step-body" id="step-2-body">
-              <p class="muted">Your Punch-Out!! (Wii, USA) disc. ISO, WBFS or RVZ.</p>
-              <div class="row"><span class="path" id="disc-path">No disc chosen</span><button id="choose-disc">Choose disc…</button></div>
-              <button class="link" id="choose-disc-folder">I already have it extracted (e.g. from Dolphin)…</button>
+              <div id="copy-punchout">
+                <p class="muted">Your Punch-Out!! (Wii, USA) disc. ISO, WBFS or RVZ.</p>
+                <div class="row"><span class="path" id="disc-path">No disc chosen</span><button id="choose-disc">Choose disc…</button></div>
+                <button class="link" id="choose-disc-folder">I already have it extracted (e.g. from Dolphin)…</button>
+              </div>
+              <div id="copy-doclouis" hidden>
+                <p class="muted">Your Doc Louis's Punch-Out!! (WiiWare, USA), installed in Dolphin: in Dolphin, choose Tools &gt; Install WAD… and pick your copy. The launcher finds it there.</p>
+                <div class="row"><span class="path" id="doc-path">Not found in Dolphin</span><button id="choose-doc-folder">Choose Dolphin's Wii folder…</button></div>
+                <button class="link" id="doc-recheck">Look again</button>
+              </div>
               <p class="error" id="disc-error" hidden></p>
             </div>
           </li>
           <li class="step" id="step-3">
             <div class="step-head"><span class="step-num">3</span><span class="step-title">Build the port</span><span class="step-state" id="step-3-state"></span></div>
             <div class="step-body" id="step-3-body">
-              <p class="muted">Extracts your disc and builds the game. The first build takes a while; later ones are quicker.</p>
+              <p class="muted" id="build-note">Extracts your disc and builds the game. The first build takes a while; later ones are quicker.</p>
               <button id="build">Build</button>
             </div>
           </li>
@@ -126,7 +133,7 @@
     <section class="page" id="page-controls">
       <div class="card">
         <h2>Controls</h2>
-        <p class="muted">Play with the keyboard or a controller; the game treats both like a Wii Remote held sideways. The mouse moves the pointer in menus: left click chooses, right click goes back.</p>
+        <p class="muted">Play with the keyboard or a controller; the game treats both like a Wii Remote held sideways. The mouse moves the pointer in menus: left click chooses, right click goes back. These controls are for both games.</p>
         <div class="segmented" role="radiogroup" aria-label="Button style" data-setting="buttonStyle">
           <button data-value="auto" class="seg">Automatic</button>
           <button data-value="xbox" class="seg">Xbox</button>
@@ -161,7 +168,7 @@
           <label class="choice"><input type="radio" name="difficulty" value="hard"><span><strong>Hard</strong><span class="muted">No restarting or quitting mid-fight.</span></span></label>
           <label class="choice"><input type="radio" name="difficulty" value="insane"><span><strong>Insane</strong><span class="muted">No restart/quit. One knockdown and you're out.</span></span></label>
         </div>
-        <p class="muted small">Career fights only. Also in the game: Options → Difficulty.</p>
+        <p class="muted small">Punch-Out!!'s career fights only. Also in the game: Options → Difficulty. Everything else on this page is for both games.</p>
         <label class="switch"><input type="checkbox" id="skip-strap"><span>Skip the wrist-strap warning at start</span></label>
       </div>
       <div class="card">

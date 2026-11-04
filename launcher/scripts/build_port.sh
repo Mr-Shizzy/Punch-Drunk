@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
-# Re-Punched!!: builds the Punch-Out!! port on this computer (run by the launcher; also works by hand).
-#   PO_SRC   the port's files: punchout_region.patch, projects/punchout/{recomp.yml,MAP.txt}
-#   PO_WORK  workspace (WiiCompiled is cloned into PO_WORK/wiicompiled)
-#   PO_DATA  the extracted disc (sys/main.dol, files/...)
+# Re-Punched!!: builds one of the ports on this computer (run by the launcher; also works by hand).
+#   PO_GAME  punchout (default) or doclouis
+#   PO_SRC   the port's files: punchout_region.patch (both games), projects/<game>/{recomp.yml,MAP.txt}
+#   PO_WORK  workspace (WiiCompiled is cloned into PO_WORK/wiicompiled; one per game, so each keeps its build)
+#   PO_DATA  Punch-Out!!: the extracted disc (sys/main.dol, files/...)
+#            Doc Louis's: the title's contents (title.tmd and <content id>.app, assembled by the launcher)
 #   PO_PORT  where the playable port goes
 #   PO_LOGS  logs folder
+#   PO_SEED  optional: another game's WiiCompiled clone, copied instead of downloading it again
 # Prints "@@STEP n/7 description" between steps (the launcher's progress bar) and ninja's "[n/total]".
 set -uo pipefail
 
 : "${PO_SRC:?}" "${PO_WORK:?}" "${PO_DATA:?}" "${PO_PORT:?}" "${PO_LOGS:?}"
+GAME=${PO_GAME:-punchout}
 BASE_COMMIT=0d5c402
+case "$GAME" in
+    punchout) DOL=$PO_DATA/sys/main.dol; BIN=RePunched; OLD_BINS="PunchOut FistIn" ;;
+    # Doc Louis's game code is the title's content 1 (content 7 is only the loader that boots it).
+    doclouis) DOL=$PO_DATA/00000001.app; BIN=DocLouis; OLD_BINS=""
+              DOL_SHA256=3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb ;;
+    *) echo "BUILD FAILED: unknown game $GAME"; exit 1 ;;
+esac
 WC=$PO_WORK/wiicompiled
 mkdir -p "$PO_WORK" "$PO_PORT/UserData" "$PO_LOGS"
 exec > >(tee "$PO_LOGS/build.log") 2>&1
@@ -20,16 +31,27 @@ fail() { echo "BUILD FAILED: $*"; exit 1; }
 for tool in git dotnet cmake ninja clang clang++; do
     command -v "$tool" > /dev/null || fail "$tool is not installed"
 done
-[[ -f "$PO_DATA/sys/main.dol" ]] || fail "the extracted disc is missing ($PO_DATA)"
+if [[ $GAME == doclouis ]]; then
+    [[ -f "$DOL" ]] || fail "Doc Louis's Punch-Out!! is missing ($PO_DATA)"
+    [[ "$(sha256sum "$DOL" | cut -c1-64)" == "$DOL_SHA256" ]] || fail "that isn't the supported Doc Louis's Punch-Out!! (USA)"
+else
+    [[ -f "$DOL" ]] || fail "the extracted disc is missing ($PO_DATA)"
+fi
 [[ -f "$PO_SRC/punchout_region.patch" ]] || fail "the port's patch is missing ($PO_SRC)"
+[[ -f "$PO_SRC/projects/$GAME/MAP.txt" ]] || fail "the port's $GAME project is missing ($PO_SRC/projects/$GAME)"
 
 step 1 "Getting WiiCompiled"
+if [[ ! -d "$WC/.git" && -n "${PO_SEED:-}" && -d "$PO_SEED/.git" && -d "$PO_SEED/aurora-main" ]]; then
+    # The other game's clone, copied locally (no download); git refuses local submodule sources unless allowed.
+    git clone -q "$PO_SEED" "$WC" && git -C "$WC" remote set-url origin https://github.com/patchzyy/wiicompiled &&
+        git -C "$WC" config submodule.aurora-main.url "$PO_SEED/aurora-main" || rm -rf "$WC"
+fi
 if [[ ! -d "$WC/.git" ]]; then
     git clone --recursive https://github.com/patchzyy/wiicompiled "$WC" || fail "could not download WiiCompiled"
 fi
 git -C "$WC" fetch -q origin 2>/dev/null
 git -C "$WC" reset -q --hard "$BASE_COMMIT" || fail "could not reset WiiCompiled to $BASE_COMMIT"
-git -C "$WC" submodule update --init --recursive || fail "submodule update failed"
+git -c protocol.file.allow=always -C "$WC" submodule update --init --recursive || fail "submodule update failed"
 
 step 2 "Applying the Re-Punched!! changes"
 # Aurora's per-frame GPU buffers are fixed-size; some Punch-Out!! scenes overflow the defaults.
@@ -41,10 +63,10 @@ grep -q "IndexBufferSize = 8388608;" "$RES" || fail "could not enlarge Aurora's 
 git -C "$WC" apply --numstat --summary "$PO_SRC/punchout_region.patch" | awk '$1 == "create" {print $4}' |
     while IFS= read -r created; do rm -f "$WC/$created"; done
 git -C "$WC" apply --whitespace=nowarn "$PO_SRC/punchout_region.patch" || fail "the patch did not apply"
-mkdir -p "$WC/projects/punchout" "$WC/Assets"
-cp -f "$PO_SRC/projects/punchout/recomp.yml" "$PO_SRC/projects/punchout/MAP.txt" "$WC/projects/punchout/"
-cp -f "$PO_DATA/sys/main.dol" "$WC/Assets/main.dol"
-PROJECT=$WC/projects/punchout/recomp.yml
+mkdir -p "$WC/projects/$GAME" "$WC/Assets"
+cp -f "$PO_SRC/projects/$GAME/recomp.yml" "$PO_SRC/projects/$GAME/MAP.txt" "$WC/projects/$GAME/"
+cp -f "$DOL" "$WC/Assets/main.dol"
+PROJECT=$WC/projects/$GAME/recomp.yml
 GEN=$WC/generated
 
 step 3 "Building the translator"
@@ -72,17 +94,17 @@ clang -march=native -dM -E -x c /dev/null 2>/dev/null | grep -q '__AVX2__' && CP
 NB=$WC/native-build
 cmake -S "$WC/runtime" -B "$NB" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_ASM_COMPILER=clang -DMKW_TRANSLATED_COMPILE_JOBS=$JOBS \
-    -DMKW_X86_CPU_PROFILE=$CPU -DMKW_SETUP_VERSION=punchout-launcher || fail "cmake configure failed"
+    -DMKW_X86_CPU_PROFILE=$CPU -DMKW_SETUP_VERSION=$GAME-launcher || fail "cmake configure failed"
 
 step 7 "Compiling (the long one)"
 cmake --build "$NB" --target WiiCompiled --parallel "$(nproc)" || fail "compile failed"
 
 # Install as a portable folder: its Config.toml, saves and logs stay inside it.
-cp -f "$NB/WiiCompiled" "$PO_PORT/RePunched"
-rm -f "$PO_PORT/PunchOut" "$PO_PORT/FistIn"   # the game's earlier names
+cp -f "$NB/WiiCompiled" "$PO_PORT/$BIN"
+for old in $OLD_BINS; do rm -f "$PO_PORT/$old"; done   # the game's earlier names
 for f in dsp_coef.bin cacert.pem; do [[ -f "$NB/$f" ]] && cp -f "$NB/$f" "$PO_PORT/"; done
-rm -f "$PO_PORT/initial_pipeline_cache.db"   # Mario Kart Wii's shader list; Punch-Out!! builds its own
+rm -f "$PO_PORT/initial_pipeline_cache.db"   # Mario Kart Wii's shader list; the game builds its own
 [[ -d "$NB/wii_bootstrap" ]] && cp -rf "$NB/wii_bootstrap" "$PO_PORT/"
 if [[ -d "$WC/runtime/assets" ]]; then rm -rf "$PO_PORT/assets"; cp -rf "$WC/runtime/assets" "$PO_PORT/assets"; fi
 touch "$PO_PORT/portable.txt"
-echo "BUILD OK: $PO_PORT/RePunched"
+echo "BUILD OK: $PO_PORT/$BIN"

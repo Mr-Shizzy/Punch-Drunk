@@ -1,8 +1,13 @@
-# Re-Punched!!: builds the Punch-Out!! port on Windows (run by the launcher; the Windows twin of build_port.sh).
-#   PO_SRC     the port's files: punchout_region.patch, projects/punchout/{recomp.yml,MAP.txt}
-#   PO_WORK    workspace (WiiCompiled is cloned into PO_WORK\wiicompiled, its build tools go in PO_WORK\toolchain)
-#   PO_DATA    the extracted disc (sys\main.dol, files\...)
+# Re-Punched!!: builds one of the ports on Windows (run by the launcher; the Windows twin of build_port.sh).
+#   PO_GAME    punchout (default) or doclouis
+#   PO_SRC     the port's files: punchout_region.patch (both games), projects/<game>/{recomp.yml,MAP.txt}
+#   PO_WORK    workspace (WiiCompiled is cloned into PO_WORK\wiicompiled; one per game, so each keeps its build)
+#   PO_DATA    Punch-Out!!: the extracted disc (sys\main.dol, files\...)
+#              Doc Louis's: the title's contents (title.tmd and <content id>.app, collected by the launcher)
 #   PO_PORT    where the playable port goes
+#   PO_TOOLCHAIN  optional: where the compiler, CMake and Ninja go (default PO_WORK\toolchain; the launcher shares
+#              one between the games)
+#   PO_SEED    optional: another game's WiiCompiled clone, copied instead of downloading it again
 #   PO_GIT     git.exe (the launcher's portable MinGit)
 #   PO_DOTNET  dotnet.exe (the launcher's portable .NET SDK)
 # Prints "@@STEP n/8 description" between steps (the launcher's progress bar) and ninja's "[n/total]". The compiler,
@@ -33,11 +38,24 @@ function Need([string]$Name) {
 
 $Src = Need 'PO_SRC'; $Work = Need 'PO_WORK'; $Data = Need 'PO_DATA'; $Port = Need 'PO_PORT'
 $GitExe = Need 'PO_GIT'; $DotnetExe = Need 'PO_DOTNET'
+# (PowerShell names are case-insensitive: $GameExe, not $Bin, which the toolchain's $bin below would overwrite.)
+$Game = if ($env:PO_GAME) { $env:PO_GAME } else { 'punchout' }
+switch ($Game) {
+    'punchout' { $Dol = Join-Path $Data 'sys\main.dol'; $GameExe = 'RePunched.exe'; $OldBins = @('FistIn.exe') }
+    # Doc Louis's game code is the title's content 1 (content 7 is only the loader that boots it).
+    'doclouis' { $Dol = Join-Path $Data '00000001.app'; $GameExe = 'DocLouis.exe'; $OldBins = @() }
+    default { Fail "unknown game $Game" }
+}
 $WC = Join-Path $Work 'wiicompiled'
-$Toolchain = Join-Path $Work 'toolchain'
+$Toolchain = if ($env:PO_TOOLCHAIN) { $env:PO_TOOLCHAIN } else { Join-Path $Work 'toolchain' }
 foreach ($dir in @($Work, (Join-Path $Port 'UserData'))) { [IO.Directory]::CreateDirectory($dir) | Out-Null }
-if (-not (Test-Path -LiteralPath (Join-Path $Data 'sys\main.dol') -PathType Leaf)) { Fail "the extracted disc is missing ($Data)" }
+if ($Game -eq 'doclouis') {
+    if (-not (Test-Path -LiteralPath $Dol -PathType Leaf)) { Fail "Doc Louis's Punch-Out!! is missing ($Data)" }
+    $dolSha = (Get-FileHash -LiteralPath $Dol -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($dolSha -ne '3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb') { Fail "that isn't the supported Doc Louis's Punch-Out!! (USA)" }
+} elseif (-not (Test-Path -LiteralPath $Dol -PathType Leaf)) { Fail "the extracted disc is missing ($Data)" }
 if (-not (Test-Path -LiteralPath (Join-Path $Src 'punchout_region.patch') -PathType Leaf)) { Fail "the port's patch is missing ($Src)" }
+if (-not (Test-Path -LiteralPath (Join-Path $Src "projects\$Game\MAP.txt") -PathType Leaf)) { Fail "the port's $Game project is missing ($Src)" }
 
 # Git for Windows turns LF into CRLF on checkout by default, which would stop the patch applying; long paths
 # because the translated sources nest deeply.
@@ -53,12 +71,22 @@ $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
 
 # ---------------------------------------------------------------------------------------------------------------
 Step 1 'Getting WiiCompiled'
+$Seed = $env:PO_SEED
+if (-not (Test-Path -LiteralPath (Join-Path $WC '.git')) -and $Seed -and (Test-Path -LiteralPath (Join-Path $Seed '.git')) -and
+    (Test-Path -LiteralPath (Join-Path $Seed 'aurora-main'))) {
+    # The other game's clone, copied locally (no download); git refuses local submodule sources unless allowed.
+    & $GitExe @GitFlags clone -q $Seed $WC
+    if ($LASTEXITCODE -eq 0) {
+        & $GitExe @GitFlags -C $WC remote set-url origin https://github.com/patchzyy/wiicompiled
+        & $GitExe @GitFlags -C $WC config submodule.aurora-main.url (Join-Path $Seed 'aurora-main')
+    } elseif (Test-Path -LiteralPath $WC) { Remove-Item -LiteralPath $WC -Recurse -Force }
+}
 if (-not (Test-Path -LiteralPath (Join-Path $WC '.git'))) {
     Git @('clone', '--recursive', 'https://github.com/patchzyy/wiicompiled', $WC) 'could not download WiiCompiled'
 }
 & $GitExe @GitFlags -C $WC fetch -q origin
 Git @('-C', $WC, 'reset', '-q', '--hard', $BaseCommit) "could not reset WiiCompiled to $BaseCommit"
-Git @('-C', $WC, 'submodule', 'update', '--init', '--recursive', '--force') 'submodule update failed'
+Git @('-c', 'protocol.file.allow=always', '-C', $WC, 'submodule', 'update', '--init', '--recursive', '--force') 'submodule update failed'
 
 # ---------------------------------------------------------------------------------------------------------------
 Step 2 'Applying the Re-Punched!! changes'
@@ -80,12 +108,12 @@ foreach ($line in $summary) {
     }
 }
 Git @('-C', $WC, 'apply', '--whitespace=nowarn', $patch) 'the patch did not apply'
-$projectDir = Join-Path $WC 'projects\punchout'
+$projectDir = Join-Path $WC "projects\$Game"
 foreach ($dir in @($projectDir, (Join-Path $WC 'Assets'))) { [IO.Directory]::CreateDirectory($dir) | Out-Null }
 foreach ($name in @('recomp.yml', 'MAP.txt')) {
-    Copy-Item -LiteralPath (Join-Path $Src "projects\punchout\$name") -Destination $projectDir -Force
+    Copy-Item -LiteralPath (Join-Path $Src "projects\$Game\$name") -Destination $projectDir -Force
 }
-Copy-Item -LiteralPath (Join-Path $Data 'sys\main.dol') -Destination (Join-Path $WC 'Assets\main.dol') -Force
+Copy-Item -LiteralPath $Dol -Destination (Join-Path $WC 'Assets\main.dol') -Force
 
 # ---------------------------------------------------------------------------------------------------------------
 Step 3 'Getting the compiler and libraries'
@@ -172,7 +200,7 @@ $windres = Join-Path $bin 'x86_64-w64-mingw32-windres.exe'
 foreach ($tool in @($cmake, $ninja, $cc, $cxx, $windres)) {
     if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { Fail "a build tool is missing: $tool" }
 }
-$project = Join-Path $WS 'projects\punchout\recomp.yml'
+$project = Join-Path $WS "projects\$Game\recomp.yml"
 $gen = Join-Path $WS 'generated'
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -200,6 +228,16 @@ try {
 
     # -----------------------------------------------------------------------------------------------------------
     Step 7 'Configuring'
+    # Files dated in the future (written while the PC's clock was ahead, e.g. a Linux dual boot leaving the hardware
+    # clock in UTC) stay newer than everything Ninja writes: it then re-runs CMake 100 times and gives up ("manifest
+    # 'build.ninja' still dirty"). Such files get the current time.
+    $now = Get-Date
+    $future = @(Get-ChildItem -LiteralPath $WS -Recurse -File -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -gt $now.AddMinutes(1) })
+    if ($future.Count -gt 0) {
+        Say "Fixing $($future.Count) file(s) dated in the future (the PC's clock was ahead when they were written)"
+        foreach ($file in $future) { try { $file.LastWriteTime = $now } catch { } }
+    }
     # Only the bundled toolchain may be visible, or another compiler on PATH could leak in (as LocalBuild.ps1 does).
     $env:PATH = Get-MkwToolchainPath $TC
     $memoryGiB = [Math]::Max(1, [Math]::Floor((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB))
@@ -215,7 +253,7 @@ try {
     $configure = Get-MkwNativeConfigureArguments -SourceDirectory (Join-Path $WS 'runtime') -BuildDirectory $build `
         -Ninja $ninja -CCompiler $cc -CxxCompiler $cxx -ResourceCompiler $windres `
         -DependenciesDirectory (Join-Path $WS 'Dependencies') -NativePrebuiltDirectory '' `
-        -AdditionalArguments @("-DMKW_TRANSLATED_COMPILE_JOBS=$jobs", "-DMKW_X86_CPU_PROFILE=$cpu", '-DMKW_SETUP_VERSION=re-punched-launcher')
+        -AdditionalArguments @("-DMKW_TRANSLATED_COMPILE_JOBS=$jobs", "-DMKW_X86_CPU_PROFILE=$cpu", "-DMKW_SETUP_VERSION=$Game-launcher")
     & $cmake @configure
     if ($LASTEXITCODE -ne 0) {
         # A build folder from an older layout or toolchain can refuse to reconfigure: start it fresh once.
@@ -234,11 +272,13 @@ try {
 # Install as a portable folder: its Config.toml, saves and logs stay inside it.
 $exe = Join-Path $build 'WiiCompiled.exe'
 if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { Fail "the game wasn't built ($exe)" }
-Copy-Item -LiteralPath $exe -Destination (Join-Path $Port 'RePunched.exe') -Force
-$oldExe = Join-Path $Port 'FistIn.exe'   # the game's earlier name
-if (Test-Path -LiteralPath $oldExe) { Remove-Item -LiteralPath $oldExe -Force }
+Copy-Item -LiteralPath $exe -Destination (Join-Path $Port $GameExe) -Force
+foreach ($old in $OldBins) {   # the game's earlier names
+    $oldExe = Join-Path $Port $old
+    if (Test-Path -LiteralPath $oldExe) { Remove-Item -LiteralPath $oldExe -Force }
+}
 # The DLLs and data LocalBuild.ps1 ships beside the game, plus the CA bundle the Archipelago client verifies with.
-# initial_pipeline_cache.db is Mario Kart Wii's shader list; Punch-Out!! builds its own.
+# initial_pipeline_cache.db is Mario Kart Wii's shader list; the game builds its own.
 foreach ($name in @('dxcompiler.dll', 'dxil.dll', 'libc++.dll', 'libpng16.dll', 'libunwind.dll', 'libz.dll', 'libzlib1.dll',
         'SDL3.dll', 'sqlite3.dll', 'webgpu_dawn.dll', 'z.dll', 'noshaders.zip', 'dsp_coef.bin', 'cacert.pem')) {
     $file = Join-Path $build $name
@@ -259,5 +299,5 @@ $portAssets = Join-Path $Port 'assets'
 if (Test-Path -LiteralPath $portAssets) { Remove-Item -LiteralPath $portAssets -Recurse -Force }
 Copy-Item -LiteralPath $assets -Destination $portAssets -Recurse
 [IO.File]::WriteAllText((Join-Path $Port 'portable.txt'), '')
-Say "BUILD OK: $(Join-Path $Port 'RePunched.exe')"
+Say "BUILD OK: $(Join-Path $Port $GameExe)"
 exit 0

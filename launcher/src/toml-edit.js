@@ -2,6 +2,11 @@
 
 // Reads and changes single keys in the port's Config.toml without touching the rest of the file (comments, order,
 // other sections). Values: strings, booleans and numbers.
+// Windows: the game writes the file with CRLF line ends; lines are split on either, and written back with LF. (A CR
+// left at a line's end used to hide the key from the patterns below, so set() added the key again: a duplicate key
+// makes the whole file invalid TOML, and the game then started with no settings at all, not even the disc's path.)
+
+const splitLines = text => String(text || '').split(/\r?\n/);
 
 function sectionRange(lines, section) {
   const header = new RegExp(`^\\s*\\[\\s*${section.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\]\\s*(#.*)?$`);
@@ -55,19 +60,37 @@ function formatValue(value) {
 }
 
 function get(text, section, key) {
-  const lines = String(text || '').split('\n');
+  const lines = splitLines(text);
   const range = sectionRange(lines, section);
   if (!range) return undefined;
   const pattern = keyPattern(key);
+  let value;
   for (let i = range.start + 1; i < range.end; i++) {
     const m = pattern.exec(lines[i]);
-    if (m) return parseValue(m[1]);
+    if (m) value = parseValue(m[1]); // the last one, as repair() keeps
   }
-  return undefined;
+  return value;
+}
+
+// A key listed twice in a section (files written by launchers before the CRLF fix): only its last line is kept.
+function repair(text) {
+  const lines = splitLines(text);
+  const drop = new Set();
+  let seen = new Map();
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*\[/.test(lines[i])) { seen = new Map(); continue; }
+    const m = /^\s*([A-Za-z0-9_-]+)\s*=/.exec(lines[i]);
+    if (!m) continue;
+    if (seen.has(m[1])) drop.add(seen.get(m[1]));
+    seen.set(m[1], i);
+  }
+  const kept = lines.filter((_, i) => !drop.has(i));
+  if (kept.length && kept[kept.length - 1] === '') kept.pop();
+  return kept.join('\n') + '\n';
 }
 
 function set(text, section, key, value) {
-  const lines = String(text || '').split('\n');
+  const lines = splitLines(repair(text));
   if (lines.length && lines[lines.length - 1] === '') lines.pop();
   const line = `${key} = ${formatValue(value)}`;
   const range = sectionRange(lines, section);
@@ -90,4 +113,4 @@ function set(text, section, key, value) {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { get, set };
+module.exports = { get, set, repair };
