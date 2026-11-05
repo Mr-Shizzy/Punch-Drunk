@@ -2,7 +2,7 @@
 
 # Re-Punched!!
 
-### A Punch-Out!! (Wii, 2009) PC recompilation
+### A Punch-Out!! and Doc Louis's Punch-Out!! PC recompilation
 
 A fan-made PC port of **Punch-Out!!** (Wii, 2009) and **Doc Louis's Punch-Out!!** (WiiWare, 2009), built with the
 [WiiCompiled](https://github.com/patchzyy/wiicompiled) static recompiler. Play with a controller or the keyboard, at any
@@ -18,23 +18,12 @@ your computer from your own copy of Punch-Out!! (USA) and, if you have it, Doc L
 
 Get the launcher from the [latest release](https://gitlab.com/fist-in/Re-Punched/-/releases/permalink/latest):
 
-| Your computer | Download (all parts) | You get |
-| --- | --- | --- |
-| Linux (x86-64) | `Re-Punched-Launcher.7z.001`, `Re-Punched-Launcher.7z.002` | `Re-Punched-Launcher.AppImage` |
-| Windows 10/11 (x64) | `Re-Punched-Launcher-Setup.7z.001`, `Re-Punched-Launcher-Setup.7z.002` | `Re-Punched-Launcher-Setup.exe` |
+| Your computer | Download |
+| --- | --- |
+| Linux (x86-64) | `Re-Punched-Launcher.AppImage` |
+| Windows 10/11 (x64) | `Re-Punched-Launcher-Setup.exe` |
 
-**Each download comes in two parts**, because the release page limits each file to 100 MB. To put them back
-together:
-
-1. Download **both** parts for your system into the same folder.
-2. Extract the `.001` part. Your archive app reads the `.002` part by itself.
-   - Linux: open it with Ark, File Roller or PeaZip, or in a terminal run `7z x Re-Punched-Launcher.7z.001` (from the
-     `7zip` or `p7zip` package).
-   - Windows: install [7-Zip](https://www.7-zip.org/), right-click `Re-Punched-Launcher-Setup.7z.001` and choose
-     **7-Zip → Extract Here**. Windows' built-in extractor can't join split archives.
-3. You get the launcher file shown in the table. You can delete the parts afterwards.
-
-If a part is missing or only partly downloaded, the archive app reports an error. Download that part again.
+They're listed under **Packages** on the release.
 
 ## Play
 
