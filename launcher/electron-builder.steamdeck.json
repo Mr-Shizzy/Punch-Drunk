@@ -1,0 +1,49 @@
+{
+  "appId": "dev.fistin.launcher",
+  "productName": "POW Recompiled Launcher",
+  "files": [
+    "src/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "scripts",
+      "to": "scripts",
+      "filter": [
+        "build_port.sh",
+        "build_port_steamdeck.sh"
+      ]
+    },
+    {
+      "from": "../port",
+      "to": "port-source",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "build-steamdeck",
+      "to": ".",
+      "filter": [
+        "buildroot.tar.xz",
+        "buildroot.version"
+      ]
+    }
+  ],
+  "linux": {
+    "target": "AppImage",
+    "category": "Game",
+    "icon": "build/icon.png",
+    "artifactName": "POW-Recompiled-Launcher-SteamDeck.${ext}",
+    "executableArgs": [
+      "--no-sandbox"
+    ]
+  },
+  "electronLanguages": [
+    "en-US"
+  ],
+  "compression": "normal",
+  "directories": {
+    "output": "dist"
+  }
+}

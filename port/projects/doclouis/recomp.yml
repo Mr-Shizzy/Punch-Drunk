@@ -1,0 +1,42 @@
+schema_version: 1
+workspace_root: ../..
+
+project:
+  id: doclouis-wpce01
+  display_name: Doc Louis's Punch-Out!! (USA)
+  game_id: WPCE01
+  region: E
+
+memory:
+  base: 0x80000000
+  size: 0x01800000
+  sda_base: 0x803AEE00   # r13, from __init_registers
+  sda2_base: 0x803B2C60  # r2
+
+inputs:
+  dol:
+    # Content 1 of title 00010001-57504345 (the game; content 7 is only the NAND boot loader that loads it).
+    path: Assets/main.dol
+    sha256: 3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb
+
+translation:
+  entry_points:
+    - 0x80006124           # __start (same as Punch-Out!!)
+  function_map:
+    # recomp_wip/docl/mapbuild.py: call targets, prologues after terminators, data/code pointers (switch tables
+    # sized from their cmplwi and excluded), adjustor thunks, plus Punch-Out!!'s proven starts carried over through
+    # exact function matches. 12,303 starts.
+    path: projects/doclouis/MAP.txt
+  allow_unsupported_instructions: true
+
+runtime:
+  native_registration_root: runtime/src
+  native_abi_directories:
+    - runtime/src/hle/gx
+
+output:
+  root: generated
+  functions: functions
+  runtime_config: RuntimeConfig.h
+  data_initializer: data_sections_init.cpp
+  base_manifest: base/doclouis_base_manifest.json
