@@ -1,0 +1,4 @@
+# The game patch and shell scripts must keep LF line endings on every platform: git apply rejects a CRLF patch,
+# and bash rejects CRLF scripts. (Windows clones with core.autocrlf would otherwise convert them.)
+*.patch -text
+*.sh text eol=lf
