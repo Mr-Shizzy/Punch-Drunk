@@ -366,7 +366,15 @@ async function checkWindowsTools() {
     { name: 'vcruntime', ok: VC_RUNTIME_DLLS.every(d => fs.existsSync(path.join(sys32, d))), need: 'Visual C++ runtime' }
   ];
   const missing = results.filter(r => !r.ok).map(r => r.name);
-  return { ok: missing.length === 0, results, missing, hint: null, managed: true };
+  // Said before the button is pressed: the Visual C++ runtime is the one thing installed outside this folder, and
+  // only when Windows doesn't already have it.
+  let managedText = "The launcher downloads Git and .NET 8 into its own folder. The compiler comes during the build.";
+  if (missing.includes('vcruntime')) {
+    managedText += " The game also needs Microsoft's Visual C++ runtime, which this PC doesn't have yet: it will be " +
+      "installed into Windows as well (Microsoft's own installer; Windows asks for permission). That is the only " +
+      "thing set up outside this folder.";
+  }
+  return { ok: missing.length === 0, results, missing, hint: null, managed: true, managedText };
 }
 
 function percentOf(got, total) { return total ? Math.round((got / total) * 100) : null; }
