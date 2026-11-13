@@ -786,6 +786,8 @@ function ensureGameConfig() {
   let text = '';
   try { text = fs.readFileSync(p.gameConfig, 'utf8'); } catch { /* new */ }
   text = toml.set(text, 'paths', 'dvd_root', p.disc);
+  // The frame-rate counter is off unless the player turns it on (the game itself defaults to on).
+  if (toml.get(text, 'video', 'show_fps') === undefined) text = toml.set(text, 'video', 'show_fps', false);
   fs.writeFileSync(p.gameConfig, text);
 }
 
@@ -811,7 +813,7 @@ function readGameSettings() {
       widescreen: get('video', 'widescreen', true) !== false,
       forceAspect: get('video', 'force_aspect', false) === true,
       nativeEffects: get('video', 'native_effect_copies', false) === true,
-      showFps: get('video', 'show_fps', true) !== false,
+      showFps: get('video', 'show_fps', false) === true,
       resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
       displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
     },
