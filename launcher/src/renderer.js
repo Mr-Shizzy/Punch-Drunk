@@ -171,6 +171,7 @@ function renderSettings(s) {
   setSegmented('displayMode', g.displayMode);
   $('force-aspect').checked = g.forceAspect;
   $('native-effects').checked = g.nativeEffects;
+  $('show-fps').checked = g.showFps;
   $('graphics-note').textContent = s.running
     ? 'The game is running, so changes here apply the next time it starts. To change them now, press F10 in the game.'
     : "Auto renders at the window's size. Native is the Wii's resolution; higher multiples look sharper but need a stronger graphics card. Aspect ratio changes apply the next time the game starts.";
@@ -512,6 +513,7 @@ for (const group of document.querySelectorAll('.segmented[data-setting]')) {
 }
 $('force-aspect').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { forceAspect: $('force-aspect').checked } })));
 $('native-effects').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { nativeEffects: $('native-effects').checked } })));
+$('show-fps').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { showFps: $('show-fps').checked } })));
 
 // Window.
 $('window-minimize').addEventListener('click', () => api.window('minimize'));

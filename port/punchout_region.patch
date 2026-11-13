@@ -68842,12 +68842,12 @@ index 6c2083a..afef02e 100644
  void UpdateCursorAutoHide() {
 +    // Punch-Out!!: the game draws its own Wii Remote pointer (the mouse drives it), so while the
 +    // game has the focus the system cursor stays hidden over the window, and confined to it if
-+    // "Lock the mouse" is on. Opening the F10 bar shows and frees it again.
++    // "Lock the mouse" is on. Opening the F10 bar, or the Exit prompt, shows and frees it again.
 +    const bool punchOut = ::GuestRegion::PunchOutEngine();
 +    if (punchOut) {
 +        static SDL_Window* grabbed = nullptr;
 +        SDL_Window* focus = SDL_GetKeyboardFocus();
-+        SDL_Window* wantGrab = g_topBarVisible || !PunchOutControls::LockMouse() ? nullptr : focus;
++        SDL_Window* wantGrab = g_topBarVisible || g_exitPromptOpen || g_restartPromptOpen || !PunchOutControls::LockMouse() ? nullptr : focus;
 +        if (wantGrab != grabbed) {
 +            if (grabbed != nullptr) {
 +                SDL_SetWindowMouseGrab(grabbed, false);
@@ -68860,7 +68860,7 @@ index 6c2083a..afef02e 100644
 +    }
      const bool shouldHide =
 -        !g_topBarVisible && Clock::now() - g_lastMouseActivity >= kCursorAutoHideDelay;
-+        !g_topBarVisible && (punchOut || Clock::now() - g_lastMouseActivity >= kCursorAutoHideDelay);
++        !g_topBarVisible && !g_exitPromptOpen && !g_restartPromptOpen && (punchOut || Clock::now() - g_lastMouseActivity >= kCursorAutoHideDelay);
      if (shouldHide == g_cursorHidden) {
          return;
      }
