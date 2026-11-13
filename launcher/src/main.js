@@ -1,8 +1,8 @@
 'use strict';
 
 // POW: Recompiled!! Launcher (POW = Punch-Out!! Wii): main process. Sets up the ports on the player's own computer from their own copies (checks
-// the build tools; Punch-Out!!: validates and extracts the disc with nodtool; Doc Louis's Punch-Out!!: collects the
-// title from Dolphin's Wii storage), builds a port with scripts/build_port.sh, or scripts/build_port.ps1 on Windows,
+// the build tools; Punch-Out!!: validates and extracts the disc with nodtool; Doc Louis's Punch-Out!!: unpacks the
+// player's WAD with the Wii common key they supply, src/wad.js), builds a port with scripts/build_port.sh, or scripts/build_port.ps1 on Windows,
 // then launches it. Settings live in Punch-Out!!'s Config.toml, so the game's F10 menu and the launcher always
 // agree; Doc Louis's reads the shared ones (controls, graphics, sound, button prompts) from there too.
 
@@ -15,6 +15,7 @@ const https = require('node:https');
 const os = require('node:os');
 const path = require('node:path');
 const toml = require('./toml-edit');
+const wad = require('./wad');
 
 // The one supported disc: Punch-Out!! (USA), its main.dol.
 const GAME_ID = 'R7PE01';
@@ -25,7 +26,7 @@ const NODTOOL = {
   'linux-x64': { asset: 'nodtool-linux-x86_64', sha256: 'f853b83268b9542faf0d28815bc3a23c090ae28ebf397e46f99cbb08122c8307' },
   'win32-x64': { asset: 'nodtool-windows-x86_64.exe', sha256: '1e150e33b88157527f96caea89ad12267aed8b117180c9ebaa89ebe89c1d948d' }
 };
-// Doc Louis's Punch-Out!! (WiiWare, USA): title 00010001-57504345 as Dolphin installs it (decrypted contents), and
+// Doc Louis's Punch-Out!! (WiiWare, USA): title 00010001-57504345, and
 // the sha256 of its game code (content 1).
 const DOC_TITLE = ['00010001', '57504345'];
 const DOC_DOL_SHA256 = '3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb';
@@ -443,45 +444,10 @@ async function extractDisc() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Doc Louis's Punch-Out!!: the title, from Dolphin's Wii storage (Tools > Install WAD puts it there, decrypted)
+// Doc Louis's Punch-Out!!: the player's own WAD, unpacked by the launcher (src/wad.js) with the Wii common key they
+// supply. The key is used for that one unpack and never saved; later builds use the unpacked title.
 
-// Dolphin's Wii folder: the usual places for a normal install and the Flatpak on Linux, Documents or AppData on
-// Windows.
-function dolphinWiiFolders() {
-  const home = os.homedir();
-  if (IS_WIN) {
-    return [path.join(app.getPath('documents'), 'Dolphin Emulator', 'Wii'),
-      path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Dolphin Emulator', 'Wii')];
-  }
-  const xdg = process.env.XDG_DATA_HOME || path.join(home, '.local', 'share');
-  return [...new Set([path.join(xdg, 'dolphin-emu', 'Wii'), path.join(home, '.local', 'share', 'dolphin-emu', 'Wii'),
-    path.join(home, '.var', 'app', 'org.DolphinEmu.dolphin-emu', 'data', 'dolphin-emu', 'Wii'),
-    path.join(home, '.dolphin-emu', 'Wii')])];
-}
-// Where the title's files are: its folder (content/title.tmd, content/*.app), the shared contents (shared1: content.map
-// and *.app) and the ticket. From a Wii folder, a Dolphin user folder holding one, or the title's own folder.
-function docTitleAt(dir) {
-  if (!dir) return null;
-  const has = p => fs.existsSync(p);
-  for (const wii of [dir, path.join(dir, 'Wii')]) {
-    const title = path.join(wii, 'title', ...DOC_TITLE);
-    if (has(path.join(title, 'content', 'title.tmd'))) {
-      return { title, shared: path.join(wii, 'shared1'), ticket: path.join(wii, 'ticket', DOC_TITLE[0], `${DOC_TITLE[1]}.tik`), from: wii };
-    }
-  }
-  if (has(path.join(dir, 'content', 'title.tmd'))) {
-    // The title folder itself: shared contents next to it in its Wii folder, or copied into it (content.map + .app).
-    const wii = path.join(dir, '..', '..', '..');
-    const shared = has(path.join(wii, 'shared1', 'content.map')) ? path.join(wii, 'shared1') : dir;
-    const ticket = [path.join(wii, 'ticket', DOC_TITLE[0], `${DOC_TITLE[1]}.tik`), path.join(dir, `${DOC_TITLE[1]}.tik`), path.join(dir, 'title.tik')]
-      .find(has) || '';
-    return { title: dir, shared, ticket, from: dir };
-  }
-  return null;
-}
-function docSource() {
-  return docTitleAt(config.docFolder) || dolphinWiiFolders().map(docTitleAt).find(Boolean) || null;
-}
+const DOC_TITLE_ID = DOC_TITLE.join('').toLowerCase();
 
 function docReady() {
   try {
@@ -490,44 +456,30 @@ function docReady() {
   } catch { return false; }
 }
 
-// Copies the title's contents into doclouis/title as title.tmd + <content id>.app (what the game's ES reads), each
-// checked against the hash in its title.tmd. Shared contents are found in shared1/content.map by that hash.
-async function collectDocTitle() {
-  const src = docSource();
-  if (!src) throw new Error("Doc Louis's Punch-Out!! wasn't found in Dolphin. Install it there first (Tools > Install WAD), or choose its folder.");
-  setTask({ label: "Getting Doc Louis's Punch-Out!! from Dolphin", detail: src.from, percent: null });
-  const out = gamePaths('doclouis').data;
-  const tmd = await fsp.readFile(path.join(src.title, 'content', 'title.tmd'));
-  const count = tmd.readUInt16BE(0x1DE);
-  const shared = new Map();
+// Unpacks the chosen WAD into doclouis/title as title.tmd, title.tik and <content id>.app (what the game's ES reads),
+// each checked against its TMD hash, and the game code against the supported release's.
+async function unpackDocWad(key) {
   try {
-    const map = await fsp.readFile(path.join(src.shared, 'content.map'));
-    for (let i = 0; i + 28 <= map.length; i += 28) {
-      shared.set(map.subarray(i + 8, i + 28).toString('hex'), path.join(src.shared, map.subarray(i, i + 8).toString('latin1') + '.app'));
-    }
-  } catch { /* no shared contents */ }
-  await fsp.rm(out, { recursive: true, force: true });
-  await fsp.mkdir(out, { recursive: true });
-  await fsp.writeFile(path.join(out, 'title.tmd'), tmd);
-  for (let i = 0; i < count; i++) {
-    const r = 0x1E4 + 36 * i;
-    const cid = tmd.readUInt32BE(r), index = tmd.readUInt16BE(r + 4), type = tmd.readUInt16BE(r + 6);
-    const size = Number(tmd.readBigUInt64BE(r + 8)), sha1 = tmd.subarray(r + 16, r + 36).toString('hex');
-    const name = cid.toString(16).padStart(8, '0') + '.app';
-    let file = path.join(src.title, 'content', name);
-    if (type & 0x8000) file = shared.get(sha1) || file;
-    let data = null;
-    try { data = await fsp.readFile(file); } catch { /* missing */ }
-    if (!data || data.length < size || crypto.createHash('sha1').update(data.subarray(0, size)).digest('hex') !== sha1) {
-      throw new Error(`Doc Louis's Punch-Out!! in Dolphin is incomplete or damaged (content ${index}, ${name}). Reinstall it in Dolphin.`);
-    }
-    await fsp.writeFile(path.join(out, name), data.subarray(0, size)); // (a content's size; any padding dropped)
+    const wadFile = config.docWad;
+    if (!wadFile || !fs.existsSync(wadFile)) throw new Error("Choose your Doc Louis's Punch-Out!! WAD first.");
+    setTask({ label: "Unpacking Doc Louis's Punch-Out!!", detail: path.basename(wadFile), percent: 0 });
+    const out = gamePaths('doclouis').data;
+    let dolSha256 = '';
+    await wad.unpackWad(wadFile, key, out, {
+      titleId: DOC_TITLE_ID,
+      wrongTitleMessage: "That WAD isn't Doc Louis's Punch-Out!! (USA).",
+      check: (name, data) => {
+        if (name !== '00000001.app') return;
+        dolSha256 = crypto.createHash('sha256').update(data).digest('hex');
+        if (dolSha256 !== DOC_DOL_SHA256) throw new Error("That's a version of Doc Louis's Punch-Out!! the port doesn't support yet (it needs the USA release, WPCE01).");
+      },
+      onProgress: (n, total) => setTask({ label: "Unpacking Doc Louis's Punch-Out!!", detail: `${n} of ${total}`, percent: Math.round(n / total * 100) })
+    });
+    await fsp.writeFile(path.join(out, '..', 'collected.json'), JSON.stringify({ from: wadFile, dolSha256, at: new Date().toISOString() }, null, 2));
+    log("Doc Louis's Punch-Out!! unpacked from your WAD.");
+  } finally {
+    if (Buffer.isBuffer(key)) key.fill(0);
   }
-  if (src.ticket && fs.existsSync(src.ticket)) await fsp.copyFile(src.ticket, path.join(out, 'title.tik'));
-  const dol = path.join(out, '00000001.app');
-  const dolSha256 = fs.existsSync(dol) ? await sha256(dol) : '';
-  if (dolSha256 !== DOC_DOL_SHA256) throw new Error("That's a version of Doc Louis's Punch-Out!! the port doesn't support yet (it needs the USA release, WPCE01).");
-  await fsp.writeFile(path.join(out, '..', 'collected.json'), JSON.stringify({ from: src.from, dolSha256, at: new Date().toISOString() }, null, 2));
 }
 
 // Doc Louis's own Config.toml: where its title is. Everything shared it reads from Punch-Out!!'s (see above).
@@ -617,7 +569,7 @@ async function build() {
   }
   if (!tools.ok) throw new Error(`Missing build tools: ${tools.missing.join(', ')}.`);
   if (game === 'punchout' && !await discExtracted()) await extractDisc();
-  if (game === 'doclouis') await collectDocTitle(); // quick: a few MB, and picks up a reinstall in Dolphin
+  if (game === 'doclouis' && !docReady()) throw new Error("Unpack your Doc Louis's Punch-Out!! WAD first (step 2).");
   await fsp.mkdir(p.logs, { recursive: true });
   const steps = { total: 7, at: 0 };
   const label = `Building ${GAMES[game].name}`;
@@ -821,15 +773,15 @@ async function state() {
   const tools = await checkTools();
   const extracted = game === 'punchout' ? await discExtracted() : docReady();
   const b = await buildState(game);
-  const doc = game === 'doclouis' ? docSource() : null;
-  const haveCopy = game === 'punchout' ? Boolean(config.disc || extracted) : Boolean(doc || extracted);
+  // Doc Louis's: the WAD has to be unpacked (that needs the key) before step 2 counts as done.
+  const haveCopy = game === 'punchout' ? Boolean(config.disc || extracted) : extracted;
   // Once the game is built it can be played without the build tools (they may live in a container, or be gone).
   const step = b.built ? 0 : !tools.ok ? 1 : !haveCopy ? 2 : 3;
   return {
     game, games: Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, { name: g.name, built: fs.existsSync(gameBinary(id)) }])),
     step, tools, extracted,
     disc: config.disc || config.discFolder || null,
-    doc: doc ? doc.from : null, dolphinFolders: dolphinWiiFolders(),
+    docWad: config.docWad || null,
     build: { built: b.built, outdated: Boolean(b.outdated), at: b.info?.at || null },
     portSource: portSource(),
     dataRoot: dataRoot(),
@@ -903,18 +855,49 @@ function registerHandlers() {
     saveConfig();
     return state();
   });
-  // Doc Louis's: Dolphin's Wii folder (or its user folder, or the title's own folder) when it isn't found by itself.
-  ipcMain.handle('choose-doc-folder', async () => {
-    const r = await dialog.showOpenDialog(win, { title: "Choose Dolphin's Wii folder", properties: ['openDirectory'] });
+  // Doc Louis's: the player's WAD (checked to be the right game; no key needed for that).
+  ipcMain.handle('choose-doc-wad', async () => {
+    const r = await dialog.showOpenDialog(win, {
+      title: "Choose your Doc Louis's Punch-Out!! WAD", properties: ['openFile'],
+      filters: [{ name: 'WiiWare WAD', extensions: ['wad'] }, { name: 'All files', extensions: ['*'] }]
+    });
     if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
-    if (!docTitleAt(r.filePaths[0])) {
-      return { ok: false, problem: "Doc Louis's Punch-Out!! isn't in that folder. Choose Dolphin's Wii folder (it holds title and shared1)." };
-    }
-    config.docFolder = r.filePaths[0];
+    try {
+      if (wad.describeWad(r.filePaths[0]).titleId !== DOC_TITLE_ID) return { ok: false, problem: "That WAD isn't Doc Louis's Punch-Out!! (USA)." };
+    } catch (err) { return { ok: false, problem: err.message }; }
+    config.docWad = r.filePaths[0];
     saveConfig();
     send('state-changed');
     return { ok: true };
   });
+  // The Wii common key, to unpack it: the keys.bin from the player's BootMii backup (read here, so the key never
+  // reaches the window), or pasted. Either way it's used once and wiped; nothing about it is saved or logged.
+  const unpackWith = async getKey => {
+    if (child) return { ok: false, problem: 'Something is already running.' };
+    let key = null;
+    try {
+      key = await getKey();
+      if (!key) return { ok: false, canceled: true };
+      await unpackDocWad(key);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, problem: err.message };
+    } finally {
+      if (key) key.fill(0);
+      setTask(null);
+      send('state-changed');
+    }
+  };
+  ipcMain.handle('unpack-doc-keyfile', () => unpackWith(async () => {
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Choose keys.bin from your BootMii backup', properties: ['openFile'],
+      filters: [{ name: 'Key file', extensions: ['bin', 'txt'] }, { name: 'All files', extensions: ['*'] }]
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const file = await fsp.readFile(r.filePaths[0]);
+    try { return wad.parseKey(file); } finally { file.fill(0); }
+  }));
+  ipcMain.handle('unpack-doc-key', (_e, text) => unpackWith(async () => wad.parseKey(String(text || ''))));
   ipcMain.handle('build', exclusive(build));
   ipcMain.handle('play', exclusive(play));
   ipcMain.handle('stop', () => stopChild());

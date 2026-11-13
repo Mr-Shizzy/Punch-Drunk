@@ -1,6 +1,7 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
+let docKeyWanted = false; // Doc Louis's: a WAD was just chosen, so show the key step even if one is unpacked
 const api = window.launcher;
 let current = null;
 let page = 'play';
@@ -100,17 +101,20 @@ function renderSetup(s) {
   $('install-tools').disabled = s.busy || s.running;
   $('copy-tool-command').hidden = !s.tools.hint;
   $('tool-command').textContent = s.tools.hint || '';
-  // The game's copy: Punch-Out!!'s disc, or Doc Louis's from Dolphin.
+  // The game's copy: Punch-Out!!'s disc, or Doc Louis's WAD.
   const doc = s.game === 'doclouis';
   $('copy-punchout').hidden = doc;
   $('copy-doclouis').hidden = !doc;
   $('step-2').querySelector('.step-title').textContent = doc ? 'Your copy' : 'Your disc';
   $('build-note').textContent = doc
-    ? "Copies the game from Dolphin and builds it. The first build takes a while; later ones are quicker."
+    ? "Builds the game from your unpacked WAD. The first build takes a while; later ones are quicker."
     : 'Extracts your disc and builds the game. The first build takes a while; later ones are quicker.';
   if (doc) {
-    $('doc-path').textContent = s.doc || 'Not found in Dolphin';
-    $('step-2-state').textContent = s.doc ? 'Found in Dolphin' : s.extracted ? 'Copied' : '';
+    $('doc-path').textContent = s.docWad || (s.extracted ? 'Already unpacked' : 'No WAD chosen');
+    $('step-2-state').textContent = s.extracted ? 'Unpacked' : s.docWad ? 'Needs the key' : '';
+    // The key is only asked for while the WAD still needs unpacking (choosing the WAD again shows it again).
+    $('doc-key').hidden = !s.docWad || (s.extracted && !docKeyWanted);
+    for (const id of ['doc-keyfile', 'doc-unpack', 'choose-doc-wad']) $(id).disabled = s.busy || s.running;
   } else {
     $('disc-path').textContent = s.disc || (s.extracted ? 'Already extracted' : 'No disc chosen');
     $('step-2-state').textContent = s.extracted ? 'Extracted' : s.disc ? 'Chosen' : '';
@@ -424,12 +428,31 @@ $('choose-disc-folder').addEventListener('click', () => guarded(async () => {
 for (const id of ['punchout', 'doclouis']) {
   $(`game-${id}`).addEventListener('click', () => guarded(async () => { $('disc-error').hidden = true; render(await api.selectGame(id)); }));
 }
-$('choose-doc-folder').addEventListener('click', () => guarded(async () => {
+// Doc Louis's: the WAD, then the key to unpack it (the pasted key is cleared from the box straight away).
+const docProblem = res => { if (res && !res.ok && !res.canceled) { $('disc-error').textContent = res.problem; $('disc-error').hidden = false; } };
+$('choose-doc-wad').addEventListener('click', () => guarded(async () => {
   $('disc-error').hidden = true;
-  const r = await api.chooseDocFolder();
-  if (r && !r.ok && !r.canceled) { $('disc-error').textContent = r.problem; $('disc-error').hidden = false; }
+  const res = await api.chooseDocWad();
+  if (res && res.ok) docKeyWanted = true;
+  docProblem(res);
 }));
-$('doc-recheck').addEventListener('click', () => guarded(async () => { $('disc-error').hidden = true; render(await api.state()); }));
+$('doc-keyfile').addEventListener('click', () => guarded(async () => {
+  $('disc-error').hidden = true;
+  const res = await api.unpackDocKeyFile();
+  if (res && res.ok) docKeyWanted = false;
+  docProblem(res);
+}));
+const unpackPasted = () => guarded(async () => {
+  $('disc-error').hidden = true;
+  const input = $('doc-key-input');
+  const text = input.value;
+  input.value = '';
+  const res = await api.unpackDocKey(text);
+  if (res && res.ok) docKeyWanted = false;
+  docProblem(res);
+});
+$('doc-unpack').addEventListener('click', unpackPasted);
+$('doc-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') unpackPasted(); });
 $('build').addEventListener('click', () => guarded(() => api.build()));
 $('rebuild').addEventListener('click', () => guarded(async () => { showPage('play'); await api.build(); }));
 $('play').addEventListener('click', () => guarded(() => api.play()));

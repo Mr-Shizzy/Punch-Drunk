@@ -9,5 +9,5 @@
 - `projects/doclouis/recomp.yml`, `MAP.txt`: Doc Louis's (its game code is the title's content 1).
 
 No game code or data: the build reads the game code and files from the player's own extracted disc, or for Doc
-Louis's from their own copy installed in Dolphin.
+Louis's from their own WAD, unpacked by the launcher.
 Licensed GPL-3.0, like WiiCompiled (see LICENSE).

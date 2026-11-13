@@ -19,11 +19,10 @@ into the AppImage), `../recomp_wip` (development), a folder chosen in Settings >
 1. Checks the build tools (git, .NET 8 SDK, cmake, ninja, clang) and shows the install command for your distribution.
 2. Punch-Out!!: checks your disc with nodtool (downloaded and checksum-verified on first use) and extracts it; an
    already extracted disc folder (sys/main.dol + files/) works too.
-   Doc Louis's Punch-Out!!: finds it in Dolphin's Wii folder after you install it there (Tools > Install WAD): the normal
-   Linux install (`~/.local/share/dolphin-emu/Wii`, or `~/.dolphin-emu/Wii`), the Flatpak
-   (`~/.var/app/org.DolphinEmu.dolphin-emu/data/dolphin-emu/Wii`), or on Windows `Documents\Dolphin Emulator\Wii` or
-   `%APPDATA%\Dolphin Emulator\Wii`; another folder can be chosen. Its contents are checked against the title's own
-   hashes and copied into the launcher's folder.
+   Doc Louis's Punch-Out!!: unpacks your WAD (`src/wad.js`) with the Wii common key you supply (your BootMii
+   `keys.bin`, or pasted). The key is used for that one unpack, then wiped from memory; it is never saved or logged,
+   and none ships with the launcher. Each content is checked against the title's own hashes (a wrong key fails
+   there) and written into the launcher's folder. Tests: `npm test`.
 3. Builds the chosen game with `scripts/build_port.sh` (WiiCompiled at a pinned commit + the patch; `PO_GAME`
    picks the game). Each game has its own build folders, so building one doesn't undo the other.
 4. Play, Archipelago (server / slot / password; the logo lights up when the game is connected), Controls, Settings

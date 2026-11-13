@@ -67,12 +67,16 @@
               <div id="copy-punchout">
                 <p class="muted">Your Punch-Out!! (Wii, USA) disc. ISO, WBFS or RVZ.</p>
                 <div class="row"><span class="path" id="disc-path">No disc chosen</span><button id="choose-disc">Choose disc…</button></div>
-                <button class="link" id="choose-disc-folder">I already have it extracted (e.g. from Dolphin)…</button>
+                <button class="link" id="choose-disc-folder">I already have it extracted…</button>
               </div>
               <div id="copy-doclouis" hidden>
-                <p class="muted">Your Doc Louis's Punch-Out!! (WiiWare, USA), installed in Dolphin: in Dolphin, choose Tools &gt; Install WAD… and pick your copy. The launcher finds it there.</p>
-                <div class="row"><span class="path" id="doc-path">Not found in Dolphin</span><button id="choose-doc-folder">Choose Dolphin's Wii folder…</button></div>
-                <button class="link" id="doc-recheck">Look again</button>
+                <p class="muted">Your Doc Louis's Punch-Out!! (WiiWare, USA) WAD, a backup of your own copy.</p>
+                <div class="row"><span class="path" id="doc-path">No WAD chosen</span><button id="choose-doc-wad">Choose WAD…</button></div>
+                <div id="doc-key" hidden>
+                  <p class="muted">To unpack it, the launcher needs the Wii common key from your own console (in the keys.bin of your BootMii backup). It's used once to unpack the WAD and is never saved.</p>
+                  <div class="row"><button id="doc-keyfile">Choose keys.bin…</button></div>
+                  <div class="row"><input type="password" id="doc-key-input" placeholder="…or paste the key (32 hex digits)" autocomplete="off" spellcheck="false"><button class="secondary" id="doc-unpack">Unpack</button></div>
+                </div>
               </div>
               <p class="error" id="disc-error" hidden></p>
             </div>

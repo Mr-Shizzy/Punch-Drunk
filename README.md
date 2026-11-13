@@ -40,14 +40,14 @@ inside, so it's a bigger download, but SteamOS needs nothing installed.
 2. Follow the three setup steps: get the build tools (Linux: install the packages it lists; Windows: press
    **Download build tools**; Steam Deck: they come with the launcher), choose your disc (ISO, WBFS or RVZ), and press
    **Build**. The first build takes a while; after that it's just **Play**.
-3. Doc Louis's Punch-Out!!: pick its tile at the top of the launcher. Install your copy in
-   [Dolphin](https://dolphin-emu.org) first (**Tools → Install WAD…**); the launcher finds it there (the normal and
-   Flatpak Dolphin on Linux, Dolphin on Windows) or you choose Dolphin's Wii folder. Then **Build** and **Play**,
-   like Punch-Out!!. Both games use the same controls and settings.
+3. Doc Louis's Punch-Out!!: pick its tile at the top of the launcher, press **Choose WAD…** and pick your WAD. To
+   unpack it, the launcher needs the Wii common key from your own console: choose the `keys.bin` from your BootMii
+   backup, or paste the key. It's used once to unpack the WAD and is never saved, and none is included with the
+   launcher. Then **Build** and **Play**, like Punch-Out!!. Both games use the same controls and settings.
 
 You need: a clean (unpatched) Punch-Out!! (USA) disc image made from your own disc, about 10 GB of free space for the build (more on
 Windows, where the compiler is downloaded too), and 64-bit Linux, SteamOS or Windows 10/11. For Doc Louis's
-Punch-Out!!: your copy (USA, WPCE01) installed in Dolphin, and about as much space again.
+Punch-Out!!: a WAD of your own copy (USA, WPCE01), your console's Wii common key, and about as much space again.
 
 ## Features
 
