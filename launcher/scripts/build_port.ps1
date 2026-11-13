@@ -41,9 +41,9 @@ $GitExe = Need 'PO_GIT'; $DotnetExe = Need 'PO_DOTNET'
 # (PowerShell names are case-insensitive: $GameExe, not $Bin, which the toolchain's $bin below would overwrite.)
 $Game = if ($env:PO_GAME) { $env:PO_GAME } else { 'punchout' }
 switch ($Game) {
-    'punchout' { $Dol = Join-Path $Data 'sys\main.dol'; $GameExe = 'POWRecompiled.exe'; $OldBins = @('RePunched.exe', 'FistIn.exe') }
+    'punchout' { $Dol = Join-Path $Data 'sys\main.dol'; $GameExe = 'PunchDrunk.exe'; $OldBins = @('POWRecompiled.exe', 'RePunched.exe', 'FistIn.exe') }
     # Doc Louis's game code is the title's content 1 (content 7 is only the loader that boots it).
-    'doclouis' { $Dol = Join-Path $Data '00000001.app'; $GameExe = 'DocLouis.exe'; $OldBins = @() }
+    'doclouis' { $Dol = Join-Path $Data '00000001.app'; $GameExe = 'PunchDrunkDocLouis.exe'; $OldBins = @('DocLouis.exe') }
     default { Fail "unknown game $Game" }
 }
 $WC = Join-Path $Work 'wiicompiled'
@@ -304,6 +304,9 @@ $assets = Join-Path $WS 'runtime\assets'
 $portAssets = Join-Path $Port 'assets'
 if (Test-Path -LiteralPath $portAssets) { Remove-Item -LiteralPath $portAssets -Recurse -Force }
 Copy-Item -LiteralPath $assets -Destination $portAssets -Recurse
+# Punch-Drunk's window icon in place of the original one.
+$ourIcon = Join-Path $Src 'punchdrunk\icon.png'
+if ((Test-Path -LiteralPath $ourIcon) -and (Test-Path -LiteralPath (Join-Path $portAssets 'punchout'))) { Copy-Item -LiteralPath $ourIcon -Destination (Join-Path $portAssets 'punchout\icon.png') -Force }
 [IO.File]::WriteAllText((Join-Path $Port 'portable.txt'), '')
 Say "BUILD OK: $(Join-Path $Port $GameExe)"
 exit 0

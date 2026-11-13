@@ -23044,7 +23044,7 @@ index ea5a12b..9109c54 100644
 +    };
 +#ifdef _WIN32
 +    if (const char* local = std::getenv("LOCALAPPDATA"); local && *local) {
-+        for (const char* name : {"POW-Recompiled", "Re-Punched", "Fist-In"}) candidates.push_back(launcherConfig(std::filesystem::path(local) / name));
++        for (const char* name : {"Punch-Drunk"}) candidates.push_back(launcherConfig(std::filesystem::path(local) / name));
 +    }
 +#else
 +    std::filesystem::path dataHome;
@@ -23054,7 +23054,7 @@ index ea5a12b..9109c54 100644
 +        dataHome = std::filesystem::path(home) / ".local" / "share";
 +    }
 +    if (!dataHome.empty()) {
-+        for (const char* name : {"pow-recompiled", "re-punched", "fist-in", "punchout-pc"}) candidates.push_back(launcherConfig(dataHome / name));
++        for (const char* name : {"punch-drunk"}) candidates.push_back(launcherConfig(dataHome / name));
 +    }
 +#endif
 +    if (const auto& portable = PortableRootDirectory()) candidates.push_back(launcherConfig(portable->parent_path()));
@@ -34449,11 +34449,11 @@ index 0000000..f5dce19
 +
 +} // namespace
 +
-+// The game window's name and icon: "POW: Recompiled!!" (the project's name; POW = Punch-Out!! Wii) with the launcher's glove (assets/punchout/icon.png) instead of
++// The game window's name and icon: "Punch-Drunk" (the project's name) with the launcher's icon (assets/punchout/icon.png) instead of
 +// WiiCompiled's. The app ID is what Linux desktops match windows to icons and launchers by (Wayland app_id / X11
-+// WM_CLASS); the launcher writes a matching pow-recompiled.desktop. Called before aurora_initialize creates the window.
++// WM_CLASS); the launcher writes a matching punch-drunk.desktop. Called before aurora_initialize creates the window.
 +extern "C" void PunchOut_WindowIdentity(void** rgba, uint32_t* width, uint32_t* height) {
-+    SDL_SetAppMetadata("POW: Recompiled!!", nullptr, "pow-recompiled");
++    SDL_SetAppMetadata("Punch-Drunk", nullptr, "punch-drunk");
 +    const char* base = SDL_GetBasePath();
 +    const std::filesystem::path file = std::filesystem::path(base ? base : "") / "assets" / "punchout" / "icon.png";
 +    std::ifstream in(file, std::ios::binary);
@@ -68484,7 +68484,7 @@ index 56bec9f..1b4d399 100644
          if (!g_headless && RuntimeConfigFile::DiscordPresenceEnabled()) {
 -            DiscordPresence::Initialize(RuntimeConfigFile::DiscordClientId(), "Mario Kart Wii");
 +            DiscordPresence::Initialize(RuntimeConfigFile::DiscordClientId(),
-+                                        GuestRegion::PunchOutEngine() ? "POW: Recompiled!!" : "Mario Kart Wii");
++                                        GuestRegion::PunchOutEngine() ? "Punch-Drunk" : "Mario Kart Wii");
          }
          SystemBridge::Initialize();
          TranslatedFunctionRegistry::Finalize();
@@ -68494,7 +68494,7 @@ index 56bec9f..1b4d399 100644
          auroraConfig.appName = RuntimeProduct::Active().displayName.data();
 +        if (GuestRegion::PunchOutEngine()) {
 +            // Window title, taskbar name and icon (punchout_prompts.cpp).
-+            auroraConfig.appName = "POW: Recompiled!!";
++            auroraConfig.appName = "Punch-Drunk";
 +            PunchOut_WindowIdentity(&auroraConfig.iconRGBA8, &auroraConfig.iconWidth, &auroraConfig.iconHeight);
 +        }
          const auto applicationDataDirectory = RuntimeConfigFile::ApplicationDataDirectory();
@@ -68812,7 +68812,7 @@ index 6c2083a..afef02e 100644
      if (ImGui::Begin("Wiicompiled Startup", nullptr, kFlags)) {
          ImGui::SetWindowFontScale(1.25f);
 -        constexpr const char* kTitle = "WiiCompiled";
-+        const char* kTitle = ::GuestRegion::PunchOutEngine() ? "POW: Recompiled!!" : "WiiCompiled";
++        const char* kTitle = ::GuestRegion::PunchOutEngine() ? "Punch-Drunk" : "WiiCompiled";
          const ImVec2 titleSize = ImGui::CalcTextSize(kTitle);
          const float titleX = std::max(0.0f, (viewport->Size.x - titleSize.x) * 0.5f);
          const float startY = std::max(0.0f, (viewport->Size.y - titleSize.y) * 0.5f);

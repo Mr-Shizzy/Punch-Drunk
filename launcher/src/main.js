@@ -32,8 +32,8 @@ const DOC_TITLE = ['00010001', '57504345'];
 const DOC_DOL_SHA256 = '3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb';
 const GAMES = {
   // legacyBinaries: names a build from before a rename has; found, it counts as built (and outdated), so Play works.
-  punchout: { name: 'Punch-Out!!', binary: 'POWRecompiled', legacyBinaries: ['RePunched'] },
-  doclouis: { name: "Doc Louis's Punch-Out!!", binary: 'DocLouis' }
+  punchout: { name: 'Punch-Out!!', binary: 'PunchDrunk', legacyBinaries: ['POWRecompiled'] },
+  doclouis: { name: "Doc Louis's Punch-Out!!", binary: 'PunchDrunkDocLouis', legacyBinaries: ['DocLouis'] }
 };
 const IS_WIN = process.platform === 'win32';
 const EXE = IS_WIN ? '.exe' : '';
@@ -205,14 +205,19 @@ const winTools = () => {
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
+const HEADLESS = process.argv.includes('--build');
 function log(line) {
+  if (HEADLESS) console.log(line);
   logLines.push(line);
   if (logLines.length > 4000) logLines.splice(0, logLines.length - 4000);
   send('log', line);
 }
+let lastTaskLabel = null;
 function setTask(next) {
   task = next;
   send('task', task);
+  if (HEADLESS && next && next.label !== lastTaskLabel) console.log(`== ${next.label}`);
+  lastTaskLabel = next ? next.label : null;
 }
 function run(cmd, args, opts = {}) {
   return new Promise(resolve => {
@@ -232,7 +237,7 @@ async function sha256(file) {
 }
 function download(url, dest, onProgress = null, redirects = 5) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'pow-recompiled-launcher' } }, res => {
+    https.get(url, { headers: { 'User-Agent': 'punch-drunk-launcher' } }, res => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
         resolve(download(new URL(res.headers.location, url).toString(), dest, onProgress, redirects - 1));
@@ -697,20 +702,20 @@ async function build() {
 }
 
 // Linux desktops (GNOME on Wayland in particular) take a window's taskbar icon and name from the desktop entry whose
-// name matches the window's app ID. The game's is "pow-recompiled", so this hidden entry (NoDisplay: not in the app
-// menu) gives its window the glove and "POW: Recompiled!!". Rewritten on each launch so it follows the install folder.
+// name matches the window's app ID. The game's is "punch-drunk", so this hidden entry (NoDisplay: not in the app
+// menu) gives its window the icon and "Punch-Drunk". Rewritten on each launch so it follows the install folder.
 function writeGameDesktopEntry(binary) {
   if (process.platform !== 'linux') return;
   try {
     const dir = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'applications');
     const icon = path.join(path.dirname(binary), 'assets', 'punchout', 'icon.png');
     const quote = s => '"' + s.replace(/(["`$\\])/g, '\\$1') + '"';
-    const text = ['[Desktop Entry]', 'Type=Application', 'Name=POW: Recompiled!!', 'Comment=Punch-Out!! (Wii) on PC',
+    const text = ['[Desktop Entry]', 'Type=Application', 'Name=Punch-Drunk', 'Comment=Punch-Out!! (Wii) on PC',
       `Exec=${quote(binary)}`, `Path=${path.dirname(binary)}`, `Icon=${fs.existsSync(icon) ? icon : 'applications-games'}`,
-      'StartupWMClass=pow-recompiled', 'Categories=Game;', 'NoDisplay=true', ''].join('\n');
+      'StartupWMClass=punch-drunk', 'Categories=Game;', 'NoDisplay=true', ''].join('\n');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'pow-recompiled.desktop'), text);
-    for (const old of ['re-punched.desktop', 'fist-in.desktop', 'punchout-pc.desktop']) fs.rmSync(path.join(dir, old), { force: true }); // earlier names
+    fs.writeFileSync(path.join(dir, 'punch-drunk.desktop'), text);
+    for (const old of ['pow-recompiled.desktop', 're-punched.desktop', 'fist-in.desktop', 'punchout-pc.desktop']) fs.rmSync(path.join(dir, old), { force: true }); // earlier names
   } catch (err) {
     log(`Couldn't write the game's desktop entry: ${err.message}`);
   }
@@ -1086,7 +1091,27 @@ async function selfTest() {
 }
 
 usePortableFolders();
-if (process.argv.includes('--selftest')) {
+// --build <punchout|doclouis>: builds that game without a window (the same steps as the Build button), printing the
+// build's output; exit code 0 = built. For testing and for building from a script.
+if (HEADLESS) {
+  const game = process.argv[process.argv.indexOf('--build') + 1];
+  app.whenReady().then(async () => {
+    sweepTemp();
+    loadConfig();
+    let code = 1;
+    try {
+      if (!Object.hasOwn(GAMES, game)) throw new Error('Usage: --build punchout|doclouis');
+      config.game = game;
+      await build();
+      console.log(`BUILT ${GAMES[game].name}: ${gameBinary(game)}`);
+      code = 0;
+    } catch (err) {
+      console.log(`BUILD FAILED: ${err.message}`);
+    }
+    removeRunTemp();
+    app.exit(code);
+  });
+} else if (process.argv.includes('--selftest')) {
   app.whenReady().then(async () => {
     sweepTemp();
     loadConfig();

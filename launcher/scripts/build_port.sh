@@ -15,9 +15,9 @@ set -uo pipefail
 GAME=${PO_GAME:-punchout}
 BASE_COMMIT=0d5c402
 case "$GAME" in
-    punchout) DOL=$PO_DATA/sys/main.dol; BIN=POWRecompiled; OLD_BINS="RePunched PunchOut FistIn" ;;
+    punchout) DOL=$PO_DATA/sys/main.dol; BIN=PunchDrunk; OLD_BINS="POWRecompiled RePunched PunchOut FistIn" ;;
     # Doc Louis's game code is the title's content 1 (content 7 is only the loader that boots it).
-    doclouis) DOL=$PO_DATA/00000001.app; BIN=DocLouis; OLD_BINS=""
+    doclouis) DOL=$PO_DATA/00000001.app; BIN=PunchDrunkDocLouis; OLD_BINS="DocLouis"
               DOL_SHA256=3ea93aaa347414c4cd81891f4d13d605b2316abb53f1bc511d036122ea5c37eb ;;
     *) echo "BUILD FAILED: unknown game $GAME"; exit 1 ;;
 esac
@@ -107,5 +107,7 @@ for f in dsp_coef.bin cacert.pem; do [[ -f "$NB/$f" ]] && cp -f "$NB/$f" "$PO_PO
 rm -f "$PO_PORT/initial_pipeline_cache.db"   # Mario Kart Wii's shader list; the game builds its own
 [[ -d "$NB/wii_bootstrap" ]] && cp -rf "$NB/wii_bootstrap" "$PO_PORT/"
 if [[ -d "$WC/runtime/assets" ]]; then rm -rf "$PO_PORT/assets"; cp -rf "$WC/runtime/assets" "$PO_PORT/assets"; fi
+# Punch-Drunk's window icon in place of the original one.
+if [[ -f "$PO_SRC/punchdrunk/icon.png" && -d "$PO_PORT/assets/punchout" ]]; then cp -f "$PO_SRC/punchdrunk/icon.png" "$PO_PORT/assets/punchout/icon.png"; fi
 touch "$PO_PORT/portable.txt"
 echo "BUILD OK: $PO_PORT/$BIN"
