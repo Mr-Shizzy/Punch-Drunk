@@ -68527,7 +68527,7 @@ index ad031c1..c2538a5 100644
      uint32_t archivePlayer = 0;
      uint32_t soundPlayers = 0;
 diff --git a/runtime/src/settings_overlay.cpp b/runtime/src/settings_overlay.cpp
-index 6c2083a..31b22c7 100644
+index 6c2083a..48fd416 100644
 --- a/runtime/src/settings_overlay.cpp
 +++ b/runtime/src/settings_overlay.cpp
 @@ -1,4 +1,5 @@
@@ -68552,7 +68552,15 @@ index 6c2083a..31b22c7 100644
  
  #include <array>
  #include <algorithm>
-@@ -91,6 +94,11 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
+@@ -77,6 +80,7 @@ const char* GraphicsApiDisplayName() {
+ bool g_topBarVisible = false;
+ bool g_exitPromptOpen = false;
+ bool g_restartPromptOpen = false;
++bool g_barForPrompt = false; // the Exit prompt opened the settings state (free mouse) without showing the bar
+ bool g_rumbleEnabled = RuntimeConfigFile::RumbleEnabled(true);
+ int g_controllerPort = 0;
+ float g_resolutionScale = RuntimeConfigFile::ResolutionMultiplier(1.0f);
+@@ -91,6 +95,11 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
  bool g_audioMixWorker = RuntimeConfigFile::AudioMixWorkerEnabled(true);
  bool g_attenuateMusicWhenMediaPlays = RuntimeConfigFile::AttenuateMusicWhenMediaPlays(false);
  int g_frameInterpolationMode = [] {
@@ -68564,7 +68572,7 @@ index 6c2083a..31b22c7 100644
      switch (RuntimeConfigFile::FrameInterpolationFps(0)) {
      case 120:
          return 1;
-@@ -113,6 +121,7 @@ int g_displayMode = [] {
+@@ -113,6 +122,7 @@ int g_displayMode = [] {
  bool g_skipUnreadyPipelines = RuntimeConfigFile::SkipUnreadyPipelines(true);
  bool g_vsync = RuntimeConfigFile::Vsync();
  bool g_disableCopyFilter = RuntimeConfigFile::DisableCopyFilter(true);
@@ -68572,7 +68580,23 @@ index 6c2083a..31b22c7 100644
  bool g_showFps = RuntimeConfigFile::ShowFps(true);
  bool g_forceAspect = RuntimeConfigFile::ForceAspectEnabled();
  bool g_widescreen = RuntimeConfigFile::WidescreenEnabled(true);
-@@ -435,7 +444,11 @@ const char* KeyBindingName(int scancode) {
+@@ -251,6 +261,15 @@ void SetTopBarVisible(bool visible) {
+     g_topBarVisible = visible;
+ }
+ 
++// Escape opens the Exit prompt in the same state F10 gives (system mouse free and usable), without drawing the bar.
++void OpenExitPrompt() {
++    g_exitPromptOpen = true;
++    if (!g_topBarVisible) {
++        SetTopBarVisible(true);
++        g_barForPrompt = true;
++    }
++}
++
+ void ApplyConfiguredMappings() {
+     for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
+         const int32_t controllerIndex = PADGetIndexForPort(port);
+@@ -435,7 +454,11 @@ const char* KeyBindingName(int scancode) {
      }
  }
  
@@ -68585,7 +68609,7 @@ index 6c2083a..31b22c7 100644
  struct RebindState {
      bool active = false;
      bool openPopup = false;
-@@ -452,6 +465,9 @@ struct RebindState {
+@@ -452,6 +475,9 @@ struct RebindState {
      std::array<bool, SDL_GAMEPAD_AXIS_COUNT> axesReady{};
  } g_rebind;
  
@@ -68595,7 +68619,7 @@ index 6c2083a..31b22c7 100644
  void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secondary = false) {
      g_rebind = {};
      g_rebind.active = true;
-@@ -467,8 +483,11 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+@@ -467,8 +493,11 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
      std::copy_n(keys, std::min(count, static_cast<int>(g_rebind.keys.size())), g_rebind.keys.begin());
      g_rebind.mouse = SDL_GetMouseState(nullptr, nullptr);
      const int index = PADGetIndexForPort(g_rebind.port);
@@ -68609,7 +68633,7 @@ index 6c2083a..31b22c7 100644
              g_rebind.instance = SDL_GetGamepadID(pad);
              for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
                  g_rebind.buttons[i] = SDL_GetGamepadButton(pad, static_cast<SDL_GamepadButton>(i));
-@@ -480,6 +499,12 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+@@ -480,6 +509,12 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
  
  void CompleteRebind(uint32_t value) {
      const auto& capture = g_rebind;
@@ -68622,7 +68646,7 @@ index 6c2083a..31b22c7 100644
      if (capture.kind == RebindKind::Controller) {
          const int index = PADGetIndexForPort(capture.port);
          auto* pad = index >= 0 ? PADGetSDLGamepadForIndex(index) : nullptr;
-@@ -526,13 +551,17 @@ void DrawRebindPrompt() {
+@@ -526,13 +561,17 @@ void DrawRebindPrompt() {
      }
      if (g_rebind.active) {
          ImGui::Text("Rebind: %s", g_rebind.label.c_str());
@@ -68643,7 +68667,7 @@ index 6c2083a..31b22c7 100644
          const float remaining = std::chrono::duration<float>(g_rebind.deadline - Clock::now()).count();
          ImGui::Text("Unmapped in %d seconds", std::max(0, static_cast<int>(std::ceil(remaining))));
          const bool clear = ImGui::Button("Clear mapping");
-@@ -540,22 +569,27 @@ void DrawRebindPrompt() {
+@@ -540,22 +579,27 @@ void DrawRebindPrompt() {
          if (ImGui::Button("Cancel")) g_rebind.active = false;
          // UI clicks must not become mouse bindings (buttons activate on release).
          const bool overControl = ImGui::IsAnyItemHovered();
@@ -68677,7 +68701,7 @@ index 6c2083a..31b22c7 100644
              auto* pad = SDL_GetGamepadFromID(g_rebind.instance);
              if (pad != nullptr) {
                  for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
-@@ -566,8 +600,13 @@ void DrawRebindPrompt() {
+@@ -566,8 +610,13 @@ void DrawRebindPrompt() {
                  for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
                      const int value = SDL_GetGamepadAxis(pad, static_cast<SDL_GamepadAxis>(i));
                      if (std::abs(value) < 8000) g_rebind.axesReady[i] = true;
@@ -68692,7 +68716,7 @@ index 6c2083a..31b22c7 100644
                  }
              }
          }
-@@ -1019,7 +1058,68 @@ void DrawPlayerRow(uint32_t port) {
+@@ -1019,7 +1068,68 @@ void DrawPlayerRow(uint32_t port) {
      ImGui::PopID();
  }
  
@@ -68761,7 +68785,7 @@ index 6c2083a..31b22c7 100644
      ImGui::Dummy(ImVec2(kControllerMenuWidth, 0.0f));
      for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
          DrawPlayerRow(port);
-@@ -1205,13 +1305,15 @@ void DrawGraphicsSettings() {
+@@ -1205,13 +1315,15 @@ void DrawGraphicsSettings() {
              "Requests the closest native-resolution display mode to the output frame "
              "rate (60 Hz, or the frame interpolation target).");
      }
@@ -68778,7 +68802,7 @@ index 6c2083a..31b22c7 100644
          for (int mode = 0; mode < static_cast<int>(kFrameInterpolationModes.size()); ++mode) {
              const bool selected = g_frameInterpolationMode == mode;
              if (ImGui::Selectable(kFrameInterpolationModes[static_cast<size_t>(mode)], selected)) {
-@@ -1235,9 +1337,11 @@ void DrawGraphicsSettings() {
+@@ -1235,9 +1347,11 @@ void DrawGraphicsSettings() {
              aurora_set_display_mode(AURORA_DISPLAY_MODE_EXCLUSIVE);
          }
      }
@@ -68793,7 +68817,7 @@ index 6c2083a..31b22c7 100644
  #if defined(__APPLE__)
      const bool metalFxSupported = aurora_is_metalfx_spatial_supported();
      ImGui::BeginDisabled(!metalFxSupported);
-@@ -1273,6 +1377,13 @@ void DrawGraphicsSettings() {
+@@ -1273,6 +1387,13 @@ void DrawGraphicsSettings() {
          aurora_set_disable_copy_filter(g_disableCopyFilter);
          RuntimeConfigFile::SetDisableCopyFilter(g_disableCopyFilter);
      }
@@ -68807,7 +68831,7 @@ index 6c2083a..31b22c7 100644
      if (ImGui::Checkbox("Skip draws while shaders compile", &g_skipUnreadyPipelines)) {
          GX_SYNC_INLINE();
          aurora_set_skip_unready_pipelines(g_skipUnreadyPipelines);
-@@ -1390,7 +1501,7 @@ void DrawStartupScreen() {
+@@ -1390,7 +1511,7 @@ void DrawStartupScreen() {
                                          ImGuiWindowFlags_NoBringToFrontOnFocus;
      if (ImGui::Begin("Wiicompiled Startup", nullptr, kFlags)) {
          ImGui::SetWindowFontScale(1.25f);
@@ -68816,7 +68840,7 @@ index 6c2083a..31b22c7 100644
          const ImVec2 titleSize = ImGui::CalcTextSize(kTitle);
          const float titleX = std::max(0.0f, (viewport->Size.x - titleSize.x) * 0.5f);
          const float startY = std::max(0.0f, (viewport->Size.y - titleSize.y) * 0.5f);
-@@ -1438,6 +1549,8 @@ void DrawExitPrompt() {
+@@ -1438,6 +1559,8 @@ void DrawExitPrompt() {
      if (g_exitPromptOpen && !ImGui::IsPopupOpen(kTitle)) ImGui::OpenPopup(kTitle);
      if (!ImGui::BeginPopupModal(kTitle, &g_exitPromptOpen, ImGuiWindowFlags_AlwaysAutoResize)) return;
      ImGui::TextUnformatted("Quit the game?");
@@ -68825,16 +68849,19 @@ index 6c2083a..31b22c7 100644
      if (ImGui::Button("Exit", ImVec2(120.0f, 0.0f))) ExitForAuroraWindowClose();
      ImGui::SameLine();
      if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) g_exitPromptOpen = false;
-@@ -1458,6 +1571,8 @@ void DrawRestartPrompt() {
+@@ -1458,8 +1581,10 @@ void DrawRestartPrompt() {
      ImGui::EndPopup();
  }
  
 +extern "C" void PunchOut_DrawArchipelagoMenu(); // hle/punchout_ap_ui.cpp
 +
  void DrawTopBar() {
-     if (!g_topBarVisible) {
+-    if (!g_topBarVisible) {
++    if (!g_topBarVisible || g_barForPrompt) {
          return;
-@@ -1533,6 +1648,10 @@ void DrawTopBar() {
+     }
+ 
+@@ -1533,6 +1658,10 @@ void DrawTopBar() {
          ImGui::EndMenu();
      }
  
@@ -68845,7 +68872,16 @@ index 6c2083a..31b22c7 100644
      const ImGuiStyle& style = ImGui::GetStyle();
      const float hideWidth = ImGui::CalcTextSize("Hide (F10)").x + style.FramePadding.x * 2.0f;
      const float exitWidth = ImGui::CalcTextSize("X").x + style.FramePadding.x * 2.0f;
-@@ -1578,8 +1697,28 @@ bool IsMouseActivity(const SDL_Event& event) {
+@@ -1542,7 +1671,7 @@ void DrawTopBar() {
+         SetTopBarVisible(false);
+     }
+     if (ImGui::MenuItem("X")) {
+-        g_exitPromptOpen = true;
++        OpenExitPrompt();
+     }
+     ImGui::EndMainMenuBar();
+ }
+@@ -1578,8 +1707,26 @@ bool IsMouseActivity(const SDL_Event& event) {
  // Runs on the thread that pumps SDL events (the same one that calls Draw), so
  // the SDL cursor calls are safe here.
  void UpdateCursorAutoHide() {
@@ -68853,8 +68889,6 @@ index 6c2083a..31b22c7 100644
 +    // game has the focus the system cursor stays hidden over the window, and confined to it if
 +    // "Lock the mouse" is on. Opening the F10 bar, or the Exit prompt, shows and frees it again.
 +    const bool punchOut = ::GuestRegion::PunchOutEngine();
-+    // The Exit / restart prompts draw their own mouse pointer, whatever the system cursor is doing.
-+    ImGui::GetIO().MouseDrawCursor = punchOut && (g_exitPromptOpen || g_restartPromptOpen);
 +    if (punchOut) {
 +        static SDL_Window* grabbed = nullptr;
 +        SDL_Window* focus = SDL_GetKeyboardFocus();
@@ -68875,7 +68909,7 @@ index 6c2083a..31b22c7 100644
      if (shouldHide == g_cursorHidden) {
          return;
      }
-@@ -1636,6 +1775,8 @@ void InitializeRuntimeSettings() noexcept {
+@@ -1636,6 +1783,8 @@ void InitializeRuntimeSettings() noexcept {
      aurora_set_display_mode(static_cast<AuroraDisplayMode>(g_displayMode));
      g_displayMode = static_cast<int>(aurora_get_display_mode());
      aurora_set_disable_copy_filter(g_disableCopyFilter);
@@ -68884,7 +68918,7 @@ index 6c2083a..31b22c7 100644
      aurora_set_skip_unready_pipelines(g_skipUnreadyPipelines);
      g_strapInputAccepted.store(false, std::memory_order_relaxed);
      g_startupDismissFrame.store(UINT64_MAX, std::memory_order_relaxed);
-@@ -1658,8 +1799,9 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+@@ -1658,13 +1807,18 @@ void HandleEvents(const AuroraEvent* events) noexcept {
              continue;
          }
          controller_mapping_wizard::HandleSdlEvent(ev->sdl);
@@ -68896,7 +68930,26 @@ index 6c2083a..31b22c7 100644
              CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
                                                                    : static_cast<uint32_t>(PAD_KEY_INVALID));
          }
-@@ -1713,6 +1855,10 @@ void ReleaseControllers() noexcept {
+         if (!g_rebind.active && IsToggleKey(ev->sdl, SDL_SCANCODE_F10)) {
+-            SetTopBarVisible(!g_topBarVisible);
++            if (g_barForPrompt) {
++                g_barForPrompt = false; // F10 over the Exit prompt shows the whole bar
++            } else {
++                SetTopBarVisible(!g_topBarVisible);
++            }
+             ApplyInputBlockState();
+         }
+         if (!g_rebind.active && g_muteHotkey != PAD_KEY_INVALID &&
+@@ -1681,7 +1835,7 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+             } else if (g_topBarVisible) {
+                 SetTopBarVisible(false);
+             } else if (!ValveControllerConnected()) {
+-                g_exitPromptOpen = true;
++                OpenExitPrompt();
+             }
+             ApplyInputBlockState();
+         }
+@@ -1713,16 +1867,28 @@ void ReleaseControllers() noexcept {
      if (queued) SDL_Delay(120);
  }
  
@@ -68907,7 +68960,14 @@ index 6c2083a..31b22c7 100644
  void Draw() noexcept {
      // ImGui is only touched on this thread; the render worker replays a frozen copy.
      ApplyConfiguredMappings();
-@@ -1723,6 +1869,10 @@ void Draw() noexcept {
+     PersistDisplayModeIfChanged();
++    if (!g_exitPromptOpen && g_barForPrompt) {
++        g_barForPrompt = false;
++        SetTopBarVisible(false);
++    }
+     UpdateCursorAutoHide();
+     UpdateBootShaderState();
+     if (!StartupScreenVisible()) {
          DrawShaderCompilationStatus();
      }
      DrawFpsOverlay();
