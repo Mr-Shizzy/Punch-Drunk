@@ -4,7 +4,7 @@
 // inside, plus the zip's SHA-256. No installer: unzip anywhere and run "Punch-Drunk.exe".
 //   1. runs the tests
 //   2. electron-builder --win dir (the unpacked app)
-//   3. copies it to disteleasePunch-Drunk, with the README and licence files
+//   3. copies it to dist\release\Punch-Drunk, with the README and licence files
 //   4. runs the built exe's --selftest from a copy in a folder with a space in its path (proves it's portable)
 //   5. zips it (top folder inside) and writes <zip>.sha256
 //   6. deletes the intermediate folders, so the only exe left is the one in the release
