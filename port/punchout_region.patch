@@ -68527,7 +68527,7 @@ index ad031c1..c2538a5 100644
      uint32_t archivePlayer = 0;
      uint32_t soundPlayers = 0;
 diff --git a/runtime/src/settings_overlay.cpp b/runtime/src/settings_overlay.cpp
-index 6c2083a..afef02e 100644
+index 6c2083a..31b22c7 100644
 --- a/runtime/src/settings_overlay.cpp
 +++ b/runtime/src/settings_overlay.cpp
 @@ -1,4 +1,5 @@
@@ -68816,7 +68816,16 @@ index 6c2083a..afef02e 100644
          const ImVec2 titleSize = ImGui::CalcTextSize(kTitle);
          const float titleX = std::max(0.0f, (viewport->Size.x - titleSize.x) * 0.5f);
          const float startY = std::max(0.0f, (viewport->Size.y - titleSize.y) * 0.5f);
-@@ -1458,6 +1569,8 @@ void DrawRestartPrompt() {
+@@ -1438,6 +1549,8 @@ void DrawExitPrompt() {
+     if (g_exitPromptOpen && !ImGui::IsPopupOpen(kTitle)) ImGui::OpenPopup(kTitle);
+     if (!ImGui::BeginPopupModal(kTitle, &g_exitPromptOpen, ImGuiWindowFlags_AlwaysAutoResize)) return;
+     ImGui::TextUnformatted("Quit the game?");
++    ImGui::TextDisabled("Enter exits, Esc cancels.");
++    if (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false)) ExitForAuroraWindowClose();
+     if (ImGui::Button("Exit", ImVec2(120.0f, 0.0f))) ExitForAuroraWindowClose();
+     ImGui::SameLine();
+     if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) g_exitPromptOpen = false;
+@@ -1458,6 +1571,8 @@ void DrawRestartPrompt() {
      ImGui::EndPopup();
  }
  
@@ -68825,7 +68834,7 @@ index 6c2083a..afef02e 100644
  void DrawTopBar() {
      if (!g_topBarVisible) {
          return;
-@@ -1533,6 +1646,10 @@ void DrawTopBar() {
+@@ -1533,6 +1648,10 @@ void DrawTopBar() {
          ImGui::EndMenu();
      }
  
@@ -68836,7 +68845,7 @@ index 6c2083a..afef02e 100644
      const ImGuiStyle& style = ImGui::GetStyle();
      const float hideWidth = ImGui::CalcTextSize("Hide (F10)").x + style.FramePadding.x * 2.0f;
      const float exitWidth = ImGui::CalcTextSize("X").x + style.FramePadding.x * 2.0f;
-@@ -1578,8 +1695,26 @@ bool IsMouseActivity(const SDL_Event& event) {
+@@ -1578,8 +1697,28 @@ bool IsMouseActivity(const SDL_Event& event) {
  // Runs on the thread that pumps SDL events (the same one that calls Draw), so
  // the SDL cursor calls are safe here.
  void UpdateCursorAutoHide() {
@@ -68844,6 +68853,8 @@ index 6c2083a..afef02e 100644
 +    // game has the focus the system cursor stays hidden over the window, and confined to it if
 +    // "Lock the mouse" is on. Opening the F10 bar, or the Exit prompt, shows and frees it again.
 +    const bool punchOut = ::GuestRegion::PunchOutEngine();
++    // The Exit / restart prompts draw their own mouse pointer, whatever the system cursor is doing.
++    ImGui::GetIO().MouseDrawCursor = punchOut && (g_exitPromptOpen || g_restartPromptOpen);
 +    if (punchOut) {
 +        static SDL_Window* grabbed = nullptr;
 +        SDL_Window* focus = SDL_GetKeyboardFocus();
@@ -68864,7 +68875,7 @@ index 6c2083a..afef02e 100644
      if (shouldHide == g_cursorHidden) {
          return;
      }
-@@ -1636,6 +1771,8 @@ void InitializeRuntimeSettings() noexcept {
+@@ -1636,6 +1775,8 @@ void InitializeRuntimeSettings() noexcept {
      aurora_set_display_mode(static_cast<AuroraDisplayMode>(g_displayMode));
      g_displayMode = static_cast<int>(aurora_get_display_mode());
      aurora_set_disable_copy_filter(g_disableCopyFilter);
@@ -68873,7 +68884,7 @@ index 6c2083a..afef02e 100644
      aurora_set_skip_unready_pipelines(g_skipUnreadyPipelines);
      g_strapInputAccepted.store(false, std::memory_order_relaxed);
      g_startupDismissFrame.store(UINT64_MAX, std::memory_order_relaxed);
-@@ -1658,8 +1795,9 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+@@ -1658,8 +1799,9 @@ void HandleEvents(const AuroraEvent* events) noexcept {
              continue;
          }
          controller_mapping_wizard::HandleSdlEvent(ev->sdl);
@@ -68885,7 +68896,7 @@ index 6c2083a..afef02e 100644
              CompleteRebind(g_rebind.kind == RebindKind::Controller ? PAD_NATIVE_BUTTON_DISABLED
                                                                    : static_cast<uint32_t>(PAD_KEY_INVALID));
          }
-@@ -1713,6 +1851,10 @@ void ReleaseControllers() noexcept {
+@@ -1713,6 +1855,10 @@ void ReleaseControllers() noexcept {
      if (queued) SDL_Delay(120);
  }
  
@@ -68896,7 +68907,7 @@ index 6c2083a..afef02e 100644
  void Draw() noexcept {
      // ImGui is only touched on this thread; the render worker replays a frozen copy.
      ApplyConfiguredMappings();
-@@ -1723,6 +1865,10 @@ void Draw() noexcept {
+@@ -1723,6 +1869,10 @@ void Draw() noexcept {
          DrawShaderCompilationStatus();
      }
      DrawFpsOverlay();
