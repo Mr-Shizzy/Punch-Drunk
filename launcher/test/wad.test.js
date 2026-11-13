@@ -16,7 +16,9 @@ const sample = () => [
   { id: 1, data: crypto.randomBytes(70000) },
   { id: 0x1a, data: crypto.randomBytes(33), shared: true }
 ];
-function tmpDir() { return fs.mkdtempSync(path.join(os.tmpdir(), 'wadtest-')); }
+const made = [];
+function tmpDir() { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'wadtest-')); made.push(d); return d; }
+test.after(() => { for (const d of made) fs.rmSync(d, { recursive: true, force: true }); });
 
 test('parseKey: hex, spaced hex, raw 16 bytes, BootMii keys.bin', () => {
   const key = crypto.randomBytes(16);
