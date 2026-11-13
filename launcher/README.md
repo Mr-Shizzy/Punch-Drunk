@@ -32,8 +32,9 @@ into the AppImage), `../recomp_wip` (development), a folder chosen in Settings >
 
 Linux and Windows. Packaging: `npm run dist` (Linux AppImage), `npm run dist:win` (the portable Windows zip,
 `packaging/build_release.js`). Portable on Windows: settings.json, data and temp beside the exe, nothing in AppData;
-build tools get a home inside data for their caches. The launcher downloads its own Git (MinGit) and .NET 8 SDK into its tools folder, offers
-Microsoft's Visual C++ runtime installer if it's missing, and `scripts/build_port.ps1` gets the compiler, CMake and
+build tools get a home inside data for their caches. The launcher downloads its own Git (MinGit) and .NET 8 SDK into its tools folder, and
+ships Microsoft's Visual C++ runtime DLLs (`packaging/fetch_vcruntime.js`, from Microsoft's signed redistributable):
+before a game starts they go beside it only if Windows' own copy is missing or older, so nothing is installed. And `scripts/build_port.ps1` gets the compiler, CMake and
 Ninja through WiiCompiled's own pinned Windows scripts.
 
 ## Changing the logo

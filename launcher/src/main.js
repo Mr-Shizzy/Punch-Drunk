@@ -46,7 +46,6 @@ const MINGIT = {
   sha256: '82b562c918ec87b2ef5316ed79bb199e3a25719bb871a0f10294acf21ebd08cd'
 };
 const DOTNET_RELEASES = 'https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json';
-const VC_REDIST = 'https://aka.ms/vs/17/release/vc_redist.x64.exe';
 const TOOLS = [
   { name: 'git', args: ['--version'] },
   { name: 'dotnet', args: ['--list-sdks'], check: out => dotnetSdkOk(out), need: '.NET SDK 8.0.200 or newer' },
@@ -356,10 +355,8 @@ async function hashFile(file, algorithm) {
   for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
   return hash.digest('hex');
 }
-const VC_RUNTIME_DLLS = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'];
 async function checkWindowsTools() {
   const t = winTools();
-  const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
   let dotnetOk = false;
   if (fs.existsSync(t.dotnet)) {
     const r = await run(t.dotnet, ['--list-sdks'], { timeout: 20000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
@@ -367,19 +364,52 @@ async function checkWindowsTools() {
   }
   const results = [
     { name: 'git', ok: fs.existsSync(t.git), need: 'Git' },
-    { name: 'dotnet', ok: dotnetOk, need: '.NET 8 SDK' },
-    { name: 'vcruntime', ok: VC_RUNTIME_DLLS.every(d => fs.existsSync(path.join(sys32, d))), need: 'Visual C++ runtime' }
+    { name: 'dotnet', ok: dotnetOk, need: '.NET 8 SDK' }
   ];
   const missing = results.filter(r => !r.ok).map(r => r.name);
-  // Said before the button is pressed: the Visual C++ runtime is the one thing installed outside this folder, and
-  // only when Windows doesn't already have it.
-  let managedText = "The launcher downloads Git and .NET 8 into its own folder. The compiler comes during the build.";
-  if (missing.includes('vcruntime')) {
-    managedText += " The game also needs Microsoft's Visual C++ runtime, which this PC doesn't have yet: it will be " +
-      "installed into Windows as well (Microsoft's own installer; Windows asks for permission). That is the only " +
-      "thing set up outside this folder.";
-  }
+  const managedText = 'The first build downloads Git, .NET 8 and the compiler into this folder. Nothing is installed into Windows.';
   return { ok: missing.length === 0, results, missing, hint: null, managed: true, managedText };
+}
+
+// ---- The Visual C++ runtime, app-local ----
+// The game's graphics DLLs (webgpu_dawn.dll, dxcompiler.dll) need Microsoft's Visual C++ runtime. The launcher ships
+// those DLLs (resources\vcruntime, from Microsoft's redistributable: packaging\fetch_vcruntime.js) instead of
+// installing anything. Before each game starts: if Windows' own copy is missing or older than ours, ours goes beside
+// the game (Windows loads DLLs from the game's folder first); if Windows' is as new or newer, ours is taken away from
+// the game's folder so Windows' is used. Ours always stays in the launcher, so uninstalling Windows' copy later is fine.
+const VC_RUNTIME_DLLS = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_atomic_wait.dll'];
+function bundledVcRuntime() {
+  const dirs = [path.join(process.resourcesPath || '', 'vcruntime'), path.join(__dirname, '..', 'vcruntime')];
+  return dirs.find(dir => VC_RUNTIME_DLLS.every(d => fs.existsSync(path.join(dir, d)))) || null;
+}
+// A Windows DLL's file version (VS_FIXEDFILEINFO), as a number that sorts correctly; 0 when it can't be read.
+function dllVersion(file) {
+  let buf;
+  try { buf = fs.readFileSync(file); } catch { return 0; }
+  const at = buf.indexOf(Buffer.from([0xBD, 0x04, 0xEF, 0xFE]));
+  if (at < 0 || at + 16 > buf.length) return 0;
+  const ms = buf.readUInt32LE(at + 8), ls = buf.readUInt32LE(at + 12);
+  return ((ms >>> 16) * 2 ** 48) + ((ms & 0xFFFF) * 2 ** 32) + ((ls >>> 16) * 2 ** 16) + (ls & 0xFFFF);
+}
+const versionText = v => [Math.floor(v / 2 ** 48), Math.floor(v / 2 ** 32) % 65536, Math.floor(v / 2 ** 16) % 65536, v % 65536].join('.');
+function prepareVcRuntime(portDir) {
+  if (!IS_WIN) return;
+  const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  const system = Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(sys32, d))));
+  const bundled = bundledVcRuntime();
+  const ours = bundled ? Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(bundled, d)))) : 0;
+  if (bundled && ours > system) {
+    for (const d of VC_RUNTIME_DLLS) {
+      const target = path.join(portDir, d);
+      if (dllVersion(target) !== dllVersion(path.join(bundled, d))) fs.copyFileSync(path.join(bundled, d), target);
+    }
+    log(`Visual C++ runtime: using the launcher's ${versionText(ours)}${system ? ` (Windows has ${versionText(system)})` : " (Windows doesn't have it)"}.`);
+  } else if (system) {
+    for (const d of VC_RUNTIME_DLLS) fs.rmSync(path.join(portDir, d), { force: true });
+    log(`Visual C++ runtime: using Windows' ${versionText(system)}.`);
+  } else {
+    throw new Error("The game needs Microsoft's Visual C++ runtime, and this copy of the launcher is missing its own. Download the launcher again.");
+  }
 }
 
 function percentOf(got, total) { return total ? Math.round((got / total) * 100) : null; }
@@ -421,19 +451,6 @@ async function installWindowsTools() {
     setTask({ label: 'Unpacking .NET 8', detail: 'About a minute', percent: null });
     await unzip(zip, t.dotnetDir);
     await fsp.rm(zip, { force: true });
-  }
-  if (!status.results.find(r => r.name === 'vcruntime').ok) {
-    // Microsoft's own installer (the game's renderer DLLs need it). Windows asks for permission to install it.
-    const exe = path.join(p.tools, 'vc_redist.x64.exe');
-    await download(VC_REDIST, exe, (got, total) => setTask({ label: 'Downloading the Visual C++ runtime', detail: mb(got), percent: percentOf(got, total) }));
-    const sig = await run('powershell.exe', ['-NoProfile', '-Command',
-      `$s = Get-AuthenticodeSignature -LiteralPath '${exe.replace(/'/g, "''")}'; "$($s.Status)|$($s.SignerCertificate.Subject)"`], { timeout: 60000 });
-    if (!/^Valid\|.*O=Microsoft Corporation/m.test(sig.stdout)) { await fsp.rm(exe, { force: true }); throw new Error("The Visual C++ runtime download isn't signed by Microsoft."); }
-    setTask({ label: 'Installing the Visual C++ runtime', detail: 'Allow it in the Windows prompt', percent: null });
-    // Start-Process -Verb RunAs: the installer needs administrator rights, which a plain spawn can't ask for.
-    await run('powershell.exe', ['-NoProfile', '-Command',
-      `Start-Process -FilePath '${exe.replace(/'/g, "''")}' -ArgumentList '/install','/passive','/norestart' -Verb RunAs -Wait`], { timeout: 10 * 60000 });
-    await fsp.rm(exe, { force: true });
   }
   return checkTools(true);
 }
@@ -729,6 +746,7 @@ async function play() {
   ensureGameConfig(); // Punch-Out!!'s: also where Doc Louis's reads the shared settings
   if (game === 'doclouis') ensureDocConfig();
   else writeGameDesktopEntry(state.binary);
+  prepareVcRuntime(p.port);
   gameRunning = true;
   send('state-changed');
   const logFile = path.join(p.logs, 'game.log');
@@ -1065,6 +1083,13 @@ async function selfTest() {
     if (!src) throw new Error('punchout_region.patch not found');
     for (const game of Object.keys(GAMES)) if (!fs.existsSync(path.join(src, 'projects', game, 'MAP.txt'))) throw new Error(`projects/${game} missing`);
   });
+  if (IS_WIN && app.isPackaged) {
+    await check('Visual C++ runtime (bundled)', () => {
+      const dir = bundledVcRuntime();
+      if (!dir) throw new Error('resources\\vcruntime is missing or incomplete');
+      return versionText(Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(dir, d)))));
+    });
+  }
   await check('build script', () => { if (!fs.existsSync(buildScript())) throw new Error(`${path.basename(buildScript())} missing`); });
   await check('WAD unpacker', async () => {
     const key = crypto.randomBytes(16);

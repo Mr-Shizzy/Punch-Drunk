@@ -1,0 +1,35 @@
+Punch-Drunk: Punch-Out (Wii) Recomp - third-party notices
+==========================================================
+
+Shipped in this folder
+----------------------
+
+Electron (MIT) and Chromium (various open-source licences)
+  The launcher runs on Electron. Licence texts: LICENSE.electron.txt and LICENSES.chromium.html.
+
+Microsoft Visual C++ runtime (resources\vcruntime: vcruntime140.dll, vcruntime140_1.dll,
+msvcp140.dll, msvcp140_atomic_wait.dll)
+  Copyright (c) Microsoft Corporation. Redistributable files from Microsoft's Visual C++
+  redistributable, unmodified and signed by Microsoft, shipped app-local for the game's graphics
+  libraries under the redistribution terms of Microsoft Visual Studio. Nothing is installed into
+  Windows: the launcher copies them beside the game only when Windows' own copy is missing or older.
+  resources\vcruntime\VERSION.json says which version this is.
+
+POW: Recompiled!! launcher (MIT) and port files (GPL-3.0)
+  Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
+  LICENSE-launcher.txt and LICENSE-port.txt.
+
+Controller button glyphs: UI Elements by Arks (@ScissorMarks), CC BY 4.0 (https://arks.itch.io).
+
+Downloaded on your PC during the first build (not shipped)
+----------------------------------------------------------
+
+Each is fetched from its publisher and checked against a pinned checksum or the publisher's own.
+  WiiCompiled (GPL-3.0)          https://github.com/patchzyy/wiicompiled
+  nod / nodtool (MIT/Apache-2.0) https://github.com/encounter/nod
+  MinGit (GPL-2.0)               https://github.com/git-for-windows/git
+  .NET 8 SDK (MIT)               https://dotnet.microsoft.com
+  llvm-mingw, CMake, Ninja and the game's libraries, from WiiCompiled's own pinned list.
+
+Punch-Out!! and Doc Louis's Punch-Out!! are (c) Nintendo. Not affiliated with or endorsed by
+Nintendo. No game code or data is included.
