@@ -1,2 +1,8 @@
 node_modules/
 dist/
+# Never commit game files or console keys (players bring their own)
+keys.bin
+*.wad
+*.rvz
+*.iso
+*.wbfs

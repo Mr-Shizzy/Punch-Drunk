@@ -205,7 +205,7 @@ const winTools = () => {
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
-const HEADLESS = process.argv.includes('--build');
+const HEADLESS = process.argv.includes('--build') || process.argv.includes('--unpack-doc');
 function log(line) {
   if (HEADLESS) console.log(line);
   logLines.push(line);
@@ -1093,7 +1093,7 @@ async function selfTest() {
 usePortableFolders();
 // --build <punchout|doclouis>: builds that game without a window (the same steps as the Build button), printing the
 // build's output; exit code 0 = built. For testing and for building from a script.
-if (HEADLESS) {
+if (process.argv.includes('--build')) {
   const game = process.argv[process.argv.indexOf('--build') + 1];
   app.whenReady().then(async () => {
     sweepTemp();
@@ -1107,6 +1107,32 @@ if (HEADLESS) {
       code = 0;
     } catch (err) {
       console.log(`BUILD FAILED: ${err.message}`);
+    }
+    removeRunTemp();
+    app.exit(code);
+  });
+} else if (process.argv.includes('--unpack-doc')) {
+  // --unpack-doc <wad> <keys.bin or key file>: what Choose WAD + Choose keys.bin do, without a window. The key is read
+  // from the file, used once and wiped, as in the window.
+  const i = process.argv.indexOf('--unpack-doc');
+  const [wadFile, keyFile] = [process.argv[i + 1], process.argv[i + 2]];
+  app.whenReady().then(async () => {
+    sweepTemp();
+    loadConfig();
+    let code = 1;
+    try {
+      if (!wadFile || !keyFile) throw new Error('Usage: --unpack-doc <wad> <keys.bin>');
+      if (wad.describeWad(wadFile).titleId !== DOC_TITLE_ID) throw new Error("That WAD isn't Doc Louis's Punch-Out!! (USA).");
+      config.docWad = path.resolve(wadFile);
+      saveConfig();
+      const file = fs.readFileSync(keyFile);
+      let key;
+      try { key = wad.parseKey(file); } finally { file.fill(0); }
+      await unpackDocWad(key);
+      console.log(`UNPACKED to ${gamePaths('doclouis').data}`);
+      code = 0;
+    } catch (err) {
+      console.log(`UNPACK FAILED: ${err.message}`);
     }
     removeRunTemp();
     app.exit(code);
