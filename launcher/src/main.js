@@ -641,7 +641,10 @@ function buildEnvironment() {
     PO_NUGET_CONFIG: path.join(home, 'nuget', 'NuGet.Config'),
     DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1', DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false',
     MSBUILDDISABLENODEREUSE: '1', DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1', UseSharedCompilation: 'false',
-    CMAKE_EXPORT_NO_PACKAGE_REGISTRY: 'ON'
+    CMAKE_EXPORT_NO_PACKAGE_REGISTRY: 'ON',
+    // Drives that keep no file owners (exFAT, many external disks) make git refuse its own folders as "dubious ownership".
+    // Every git the build starts is told these folders are fine, for this run only (nothing written to a git config).
+    GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'safe.directory', GIT_CONFIG_VALUE_0: '*'
   };
   if (IS_WIN) {
     Object.assign(env, { USERPROFILE: home, HOME: home, APPDATA: path.join(home, 'AppData', 'Roaming'),

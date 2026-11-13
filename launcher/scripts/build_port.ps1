@@ -60,7 +60,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $Src "projects\$Game\MAP.txt") -Path
 # Git for Windows turns LF into CRLF on checkout by default, which would stop the patch applying; long paths
 # because the translated sources nest deeply.
 $env:GIT_CONFIG_NOSYSTEM = '1'
-$GitFlags = @('-c', 'core.autocrlf=false', '-c', 'core.longpaths=true', '-c', 'advice.detachedHead=false')
+$GitFlags = @('-c', 'core.autocrlf=false', '-c', 'core.longpaths=true', '-c', 'advice.detachedHead=false', '-c', 'safe.directory=*')
 function Git([string[]]$Arguments, [string]$What) { Run $GitExe ($GitFlags + $Arguments) $What }
 
 $env:DOTNET_ROOT = Split-Path -Parent $DotnetExe
