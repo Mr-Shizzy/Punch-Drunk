@@ -1,6 +1,6 @@
 {
   "appId": "dev.fistin.launcher",
-  "productName": "POW Recompiled Launcher",
+  "productName": "Punch-Drunk",
   "files": [
     "src/**/*",
     "package.json"
@@ -34,7 +34,7 @@
     "target": "AppImage",
     "category": "Game",
     "icon": "build/icon.png",
-    "artifactName": "POW-Recompiled-Launcher-SteamDeck.${ext}",
+    "artifactName": "Punch-Drunk-SteamDeck.${ext}",
     "executableArgs": [
       "--no-sandbox"
     ]

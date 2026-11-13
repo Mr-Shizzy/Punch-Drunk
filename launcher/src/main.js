@@ -1,6 +1,6 @@
 'use strict';
 
-// POW: Recompiled!! Launcher (POW = Punch-Out!! Wii): main process. Sets up the ports on the player's own computer from their own copies (checks
+// Punch-Drunk: Punch-Out (Wii) Recomp, a fork of POW: Recompiled!!: the launcher's main process. Sets up the ports on the player's own computer from their own copies (checks
 // the build tools; Punch-Out!!: validates and extracts the disc with nodtool; Doc Louis's Punch-Out!!: unpacks the
 // player's WAD with the Wii common key they supply, src/wad.js), builds a port with scripts/build_port.sh, or scripts/build_port.ps1 on Windows,
 // then launches it. Settings live in Punch-Out!!'s Config.toml, so the game's F10 menu and the launcher always
@@ -95,10 +95,10 @@ const logLines = [];
 // Portable: everything lives in the program's own folder, found from where it runs (so the folder can be moved or
 // renamed): the launcher's settings.json, its data folder (tools, the unpacked games, builds, logs), Chromium's
 // profile and a temp folder per running copy. Nothing goes to AppData, the registry or the system temp folder.
-// Development (npm start): POW_PORTABLE_ROOT, or launcher/dev-portable.
+// Development (npm start): PUNCHDRUNK_ROOT, or launcher/dev-portable.
 const PORTABLE_ROOT = app.isPackaged
   ? path.dirname(process.env.APPIMAGE || process.execPath)
-  : path.resolve(process.env.POW_PORTABLE_ROOT || path.join(__dirname, '..', 'dev-portable'));
+  : path.resolve(process.env.PUNCHDRUNK_ROOT || path.join(__dirname, '..', 'dev-portable'));
 const RUN_TEMP = path.join(PORTABLE_ROOT, 'temp', `run${process.pid}`);
 
 // Must run before the app is ready: Chromium's profile, crash dumps and Electron's temp folder.
@@ -153,7 +153,7 @@ const dataRoot = () => loadPath(config.dataRoot) || DEFAULT_DATA_ROOT;
 const PLAIN_PATH = /^[A-Za-z0-9 ._\\:-]+$/;
 function checkPlainDataRoot() {
   if (IS_WIN && !PLAIN_PATH.test(path.resolve(dataRoot()))) {
-    throw new Error(`The game can only be built in a folder whose path has just letters, numbers, spaces, dots, dashes and underscores. Move the launcher's folder somewhere like C:\\Games\\POW Recompiled (now: ${dataRoot()}).`);
+    throw new Error(`The game can only be built in a folder whose path has just letters, numbers, spaces, dots, dashes and underscores. Move the launcher's folder somewhere like C:\\Games\\Punch-Drunk (now: ${dataRoot()}).`);
   }
 }
 const paths = () => {
@@ -850,6 +850,18 @@ function writeGameSettings(s) {
 // ---------------------------------------------------------------------------------------------------------------
 // State for the renderer
 
+// Both games, for the home screen's cards: built (playable), outdated (an update to the port is ready) and
+// haveCopy (the disc is chosen, or the WAD unpacked: it can be built).
+async function gamesState() {
+  const out = {};
+  for (const [id, g] of Object.entries(GAMES)) {
+    const b = await buildState(id);
+    const haveCopy = id === 'punchout' ? Boolean(config.disc || await discExtracted()) : docReady();
+    out[id] = { name: g.name, built: b.built, outdated: Boolean(b.outdated), haveCopy };
+  }
+  return out;
+}
+
 async function state() {
   const game = currentGame();
   const tools = await checkTools();
@@ -860,7 +872,7 @@ async function state() {
   // Once the game is built it can be played without the build tools (they may live in a container, or be gone).
   const step = b.built ? 0 : !tools.ok ? 1 : !haveCopy ? 2 : 3;
   return {
-    game, games: Object.fromEntries(Object.entries(GAMES).map(([id, g]) => [id, { name: g.name, built: fs.existsSync(gameBinary(id)) }])),
+    game, games: await gamesState(),
     step, tools, extracted,
     disc: config.disc || config.discFolder || null,
     docWad: config.docWad || null,
@@ -1007,8 +1019,8 @@ function registerHandlers() {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1080, height: 760, minWidth: 860, minHeight: 600, frame: false, backgroundColor: '#14121f',
-    title: 'POW: Recompiled!! Launcher', show: false, icon: path.join(__dirname, 'assets', 'logo.png'),
+    width: 1080, height: 760, minWidth: 860, minHeight: 600, frame: false, backgroundColor: '#17161c',
+    title: 'Punch-Drunk: Punch-Out (Wii) Recomp', show: false, icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false }
   });
   win.loadFile(path.join(__dirname, 'index.html'));
@@ -1018,8 +1030,8 @@ function createWindow() {
     win.webContents.once('did-finish-load', async () => {
       const dir = process.env.PUNCHOUT_SCREENSHOTS;
       fs.mkdirSync(dir, { recursive: true });
-      for (const pageName of ['play', 'archipelago', 'controls', 'settings', 'credits']) {
-        await win.webContents.executeJavaScript(`document.getElementById('nav-${pageName}').click()`);
+      for (const pageName of ['home', 'controls', 'settings']) {
+        await win.webContents.executeJavaScript(pageName === 'home' ? `document.getElementById('nav-back').click()` : `document.getElementById('nav-${pageName}').click()`);
         await new Promise(r => setTimeout(r, 1200));
         fs.writeFileSync(path.join(dir, `${pageName}.png`), (await win.webContents.capturePage()).toPNG());
       }
@@ -1033,7 +1045,7 @@ function createWindow() {
 // is writable, the port's files and build scripts are there, and the WAD unpacker works (on a made-up WAD and key).
 // Writes selftest_result.txt beside the program; exit code 0 = OK.
 async function selfTest() {
-  const lines = [`POW Recompiled Launcher ${app.getVersion()} ${app.isPackaged ? 'packaged' : 'development'}`];
+  const lines = [`Punch-Drunk ${app.getVersion()} ${app.isPackaged ? 'packaged' : 'development'}`];
   const check = async (name, fn) => {
     try { const note = await fn(); lines.push(`OK   ${name}${note ? ': ' + note : ''}`); }
     catch (err) { lines.push(`FAIL ${name}: ${err.message}`); }

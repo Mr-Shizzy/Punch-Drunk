@@ -4,26 +4,25 @@ const $ = id => document.getElementById(id);
 let docKeyWanted = false; // Doc Louis's: a WAD was just chosen, so show the key step even if one is unpacked
 const api = window.launcher;
 let current = null;
-let page = 'play';
+let page = 'home';
 let logOpen = false;
 
 // ---- pages ----
-const pageOrder = ['play', 'archipelago', 'controls', 'settings', 'credits'];
+const PAGES = ['home', 'setup', 'controls', 'settings'];
+const PAGE_TITLES = { controls: 'Controls', settings: 'Settings' };
 function showPage(name) {
   const changed = page !== name;
   page = name;
-  for (const p of pageOrder) {
-    $(`page-${p}`).classList.toggle('active', p === name);
-    $(`nav-${p}`).classList.toggle('active', p === name);
-  }
+  for (const p of PAGES) $(`page-${p}`).classList.toggle('active', p === name);
+  $('nav-controls').classList.toggle('active', name === 'controls');
+  $('nav-settings').classList.toggle('active', name === 'settings');
+  $('nav-back').hidden = name === 'home';
+  $('page-title').textContent = name === 'setup' && current ? `Set up ${current.games[current.game].name}` : PAGE_TITLES[name] || '';
   // The game writes settings too (F10): show the file's current values whenever these pages are opened.
   if (changed && (name === 'settings' || name === 'controls')) sync();
 }
-function stepPage(delta) {
-  const i = pageOrder.indexOf(page);
-  showPage(pageOrder[(i + delta + pageOrder.length) % pageOrder.length]);
-}
-for (const p of pageOrder) $(`nav-${p}`).addEventListener('click', () => showPage(p));
+for (const p of ['controls', 'settings']) $(`nav-${p}`).addEventListener('click', () => showPage(page === p ? 'home' : p));
+$('nav-back').addEventListener('click', () => showPage('home'));
 
 // Lights up the button whose data-value matches in a .segmented[data-setting] group.
 function setSegmented(setting, value) {
@@ -75,78 +74,69 @@ function renderTask(task) {
 }
 
 // ---- main render ----
-function renderSetup(s) {
-  const steps = [1, 2, 3];
-  for (const n of steps) {
-    const el = $(`step-${n}`);
-    const done = s.step === 0 || n < s.step;
-    el.classList.toggle('done', done);
-    el.classList.toggle('current', n === s.step);
+const GAME_IDS = ['punchout', 'doclouis'];
+// A game's card: Play when it's built, otherwise Set up. Building an update is offered under the status line.
+function renderHome(s) {
+  for (const id of GAME_IDS) {
+    const g = s.games[id];
+    const runningThis = s.running && s.game === id;
+    const btn = $(`action-${id}`);
+    btn.textContent = runningThis ? 'Playing' : g.built ? 'Play' : 'Set up';
+    btn.classList.toggle('play', g.built);
+    btn.disabled = s.busy || s.running;
+    const state = $(`state-${id}`);
+    state.textContent = runningThis ? 'Running. Close the game to come back here.'
+      : g.built ? (g.outdated ? 'Ready. An update to the port is available.' : 'Ready')
+      : g.haveCopy ? 'Ready to build' : id === 'punchout' ? 'Needs your disc' : 'Needs your WAD';
+    state.classList.toggle('ready', g.built && !runningThis);
+    state.classList.toggle('todo', !g.built);
+    $(`update-${id}`).hidden = !(g.built && g.outdated) || s.busy || s.running;
   }
-  // Tools.
-  const list = $('tool-list');
-  list.replaceChildren(...s.tools.results.map(t => {
-    const li = document.createElement('li');
-    li.textContent = t.ok ? `✓ ${s.tools.managed ? t.need : t.name}` : `✗ ${t.need}`;
-    li.classList.toggle('missing', !t.ok);
-    return li;
-  }));
-  $('step-1-state').textContent = s.tools.ok ? 'All found' : `${s.tools.missing.length} missing`;
-  $('tool-hint').hidden = !s.tools.hint;
-  $('tool-managed').hidden = !s.tools.managed || s.tools.ok;
-  // The Steam Deck launcher's tools come with it (the text and button otherwise describe Windows' downloads).
-  if (s.tools.managedText) $('tool-managed').textContent = s.tools.managedText;
-  if (s.tools.installLabel) $('install-tools').textContent = s.tools.installLabel;
-  $('install-tools').hidden = !s.tools.managed || s.tools.ok;
-  $('install-tools').disabled = s.busy || s.running;
-  $('copy-tool-command').hidden = !s.tools.hint;
-  $('tool-command').textContent = s.tools.hint || '';
-  // The game's copy: Punch-Out!!'s disc, or Doc Louis's WAD.
+  const ap = s.settings.archipelago;
+  $('ap-badge').hidden = !ap.enabled; // Archipelago is Punch-Out!!'s only
+  $('ap-badge').classList.toggle('connected', Boolean(ap.connected));
+  $('ap-badge-text').textContent = ap.connected ? `Archipelago: connected as ${ap.slot}` : `Archipelago: ${ap.slot || 'on'} (connects in the game)`;
+  $('stop').hidden = !(s.busy || s.running);
+}
+
+function renderSetup(s) {
   const doc = s.game === 'doclouis';
+  const g = s.games[s.game];
+  if (page === 'setup') $('page-title').textContent = `Set up ${g.name}`;
+  // Step 1: the game's copy.
   $('copy-punchout').hidden = doc;
   $('copy-doclouis').hidden = !doc;
-  $('step-2').querySelector('.step-title').textContent = doc ? 'Your copy' : 'Your disc';
-  $('build-note').textContent = doc
-    ? "Builds the game from your unpacked WAD. The first build takes a while; later ones are quicker."
-    : 'Extracts your disc and builds the game. The first build takes a while; later ones are quicker.';
+  $('copy-title').textContent = doc ? 'Your WAD' : 'Your disc';
   if (doc) {
     $('doc-path').textContent = s.docWad || (s.extracted ? 'Already unpacked' : 'No WAD chosen');
-    $('step-2-state').textContent = s.extracted ? 'Unpacked' : s.docWad ? 'Needs the key' : '';
+    $('copy-state').textContent = s.extracted ? 'Unpacked' : s.docWad ? 'Needs the key' : '';
     // The key is only asked for while the WAD still needs unpacking (choosing the WAD again shows it again).
     $('doc-key').hidden = !s.docWad || (s.extracted && !docKeyWanted);
     for (const id of ['doc-keyfile', 'doc-unpack', 'choose-doc-wad']) $(id).disabled = s.busy || s.running;
   } else {
     $('disc-path').textContent = s.disc || (s.extracted ? 'Already extracted' : 'No disc chosen');
-    $('step-2-state').textContent = s.extracted ? 'Extracted' : s.disc ? 'Chosen' : '';
+    $('copy-state').textContent = s.extracted ? 'Extracted' : s.disc ? 'Chosen' : '';
   }
-  // Game tiles.
-  for (const id of ['punchout', 'doclouis']) {
-    const tile = $(`game-${id}`);
-    tile.classList.toggle('selected', s.game === id);
-    tile.disabled = s.busy || s.running;
-  }
-  // Build.
-  $('step-3-state').textContent = s.build.built ? (s.build.outdated ? 'Update available' : 'Built') : '';
-  $('build').textContent = s.build.built ? 'Rebuild' : 'Build';
-  $('build').disabled = s.busy || s.running;
-  $('setup').hidden = s.step === 0 && !s.build.outdated;
-  $('setup-title').textContent = s.build.outdated ? 'An update to the port is ready' : 'Set up POW: Recompiled!!';
-  if (s.build.outdated) { $('step-3').classList.add('current'); $('step-3').classList.remove('done'); }
-}
-
-function renderLaunch(s) {
-  const ready = s.step === 0;
-  $('play').disabled = !ready || s.busy || s.running;
-  $('play').textContent = s.running ? 'Playing' : 'Play';
-  const name = s.games?.[s.game]?.name || 'POW: Recompiled!!';
-  $('launch-title').textContent = s.running ? `${name} is running` : ready ? `Ready to play ${name}` : 'Not ready yet';
-  $('launch-detail').textContent = s.running ? 'Close the game to come back here.'
-    : ready ? (s.build.at ? `Built ${new Date(s.build.at).toLocaleString()}` : '') : 'Finish the setup above.';
-  const ap = s.settings.archipelago;
-  $('ap-badge').hidden = !ap.enabled || s.game !== 'punchout'; // Archipelago is Punch-Out!!'s only
-  $('ap-badge').classList.toggle('connected', Boolean(ap.connected));
-  $('ap-badge-text').textContent = ap.connected ? `Archipelago: connected as ${ap.slot}` : `Archipelago: ${ap.slot || 'on'} (connects in the game)`;
-  $('stop').hidden = !(s.busy || s.running);
+  const haveCopy = g.haveCopy;
+  $('step-copy').classList.toggle('done', haveCopy);
+  $('step-copy').classList.toggle('current', !haveCopy);
+  // Step 2: build. Tools the launcher brings itself are set up inside the build; others (Linux) are listed first.
+  const toolsBlock = !s.tools.ok && !s.tools.managed;
+  $('step-build').classList.toggle('current', haveCopy);
+  $('step-build').classList.toggle('waiting', !haveCopy);
+  $('step-build').classList.toggle('done', g.built && !g.outdated);
+  $('build-state').textContent = g.built ? (g.outdated ? 'Update available' : 'Built') : '';
+  $('build-note').textContent = doc
+    ? 'Builds the game from your unpacked WAD on this computer. The first build takes a while; later ones are quicker.'
+    : 'Extracts your disc and builds the game on this computer. The first build takes a while; later ones are quicker.';
+  $('tool-managed').hidden = !s.tools.managed || s.tools.ok || !s.tools.managedText;
+  $('tool-managed').textContent = s.tools.managedText || '';
+  $('tool-hint').hidden = !toolsBlock;
+  $('tool-missing').textContent = s.tools.missing.join(', ');
+  $('tool-command').textContent = s.tools.hint || '';
+  $('copy-tool-command').hidden = !s.tools.hint;
+  $('build').textContent = g.built ? 'Rebuild' : 'Build';
+  $('build').disabled = s.busy || s.running || !haveCopy || toolsBlock;
 }
 
 let apDirty = false;
@@ -186,7 +176,8 @@ function renderSettings(s) {
     : "Auto renders at the window's size. Native is the Wii's resolution; higher multiples look sharper but need a stronger graphics card. Aspect ratio changes apply the next time the game starts.";
   $('data-root').textContent = s.dataRoot;
   $('port-source').textContent = s.portSource || 'Not found';
-  $('rebuild').disabled = s.busy || s.running || s.step === 1;
+  $('rebuild').disabled = s.busy || s.running || !s.games[s.game].haveCopy;
+  $('rebuild').textContent = `Rebuild ${s.games[s.game].name}`;
 }
 
 // Controls: Config.toml [punchout_controls] (the game's punchout_controls.cpp). Each row: two keyboard boxes and two
@@ -398,14 +389,14 @@ $('controls-reset').addEventListener('click', () => guarded(() => api.saveSettin
 
 function render(s) {
   current = s;
+  renderHome(s);
   renderSetup(s);
-  renderLaunch(s);
   renderArchipelago(s);
   renderSettings(s);
   renderControls(s);
   renderTask(s.task);
   $('version').textContent = s.steamDeck ? `v${s.version} · Steam Deck` : `v${s.version}`;
-  if (!s.task && !s.busy) setStatus(s.running ? 'Playing' : s.step === 0 ? 'Ready' : 'Setup needed');
+  if (!s.task && !s.busy) setStatus(s.running ? 'Playing' : 'Ready');
 }
 async function sync() {
   try { render(await api.state()); } catch (err) { setStatus(String(err?.message || err)); }
@@ -413,7 +404,6 @@ async function sync() {
 
 // ---- actions ----
 $('recheck-tools').addEventListener('click', () => guarded(async () => render(await api.checkTools())));
-$('install-tools').addEventListener('click', () => guarded(async () => { await api.installTools(); render(await api.checkTools()); }));
 $('copy-tool-command').addEventListener('click', () => api.copyText($('tool-command').textContent).then(() => setStatus('Command copied')));
 $('choose-disc').addEventListener('click', () => guarded(async () => {
   $('disc-error').hidden = true;
@@ -425,8 +415,16 @@ $('choose-disc-folder').addEventListener('click', () => guarded(async () => {
   const r = await api.chooseDiscFolder();
   if (r && !r.ok && !r.canceled) { $('disc-error').textContent = r.problem; $('disc-error').hidden = false; }
 }));
-for (const id of ['punchout', 'doclouis']) {
-  $(`game-${id}`).addEventListener('click', () => guarded(async () => { $('disc-error').hidden = true; render(await api.selectGame(id)); }));
+// A card's button: Play a built game, or open its setup.
+for (const id of GAME_IDS) {
+  $(`action-${id}`).addEventListener('click', () => guarded(async () => {
+    $('disc-error').hidden = true;
+    const s = await api.selectGame(id);
+    render(s);
+    if (s.games[id].built) await api.play();
+    else showPage('setup');
+  }));
+  $(`update-${id}`).addEventListener('click', () => guarded(async () => { render(await api.selectGame(id)); await api.build(); }));
 }
 // Doc Louis's: the WAD, then the key to unpack it (the pasted key is cleared from the box straight away).
 const docProblem = res => { if (res && !res.ok && !res.canceled) { $('disc-error').textContent = res.problem; $('disc-error').hidden = false; } };
@@ -453,9 +451,8 @@ const unpackPasted = () => guarded(async () => {
 });
 $('doc-unpack').addEventListener('click', unpackPasted);
 $('doc-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') unpackPasted(); });
-$('build').addEventListener('click', () => guarded(() => api.build()));
-$('rebuild').addEventListener('click', () => guarded(async () => { showPage('play'); await api.build(); }));
-$('play').addEventListener('click', () => guarded(() => api.play()));
+$('build').addEventListener('click', () => guarded(async () => { await api.build(); showPage('home'); }));
+$('rebuild').addEventListener('click', () => guarded(async () => { showPage('home'); await api.build(); }));
 $('stop').addEventListener('click', () => api.stop());
 $('open-port').addEventListener('click', () => api.openFolder('port'));
 $('open-logs').addEventListener('click', () => api.openFolder('logs'));
@@ -532,18 +529,18 @@ window.addEventListener('focus', () => sync());
 window.smsGamepadNav.start({
   document, window,
   regions: '.switch, .field, .choice',
-  defaultFocus: () => [page === 'play' ? ($('play').disabled ? $('setup').querySelector('.step.current button') : $('play')) : $(`nav-${page}`), $('nav-play')],
+  defaultFocus: () => [page === 'home' ? $('action-punchout') : page === 'setup' ? $('page-setup').querySelector('.step.current button:not([hidden])') : $('nav-back'), $('action-punchout')],
   // The game reads the same controller while it runs.
   paused: () => Boolean(current?.running) || Boolean(capture),
   actions: {
-    back: () => { if (logOpen) setLogOpen(false); else if (page !== 'play') showPage('play'); },
-    menu: () => showPage(page === 'settings' ? 'play' : 'settings'),
+    back: () => { if (logOpen) setLogOpen(false); else if (page !== 'home') showPage('home'); },
+    menu: () => showPage(page === 'settings' ? 'home' : 'settings'),
     view: () => setLogOpen(!logOpen),
-    previous: () => stepPage(-1),
-    next: () => stepPage(1)
+    previous: () => showPage(page === 'controls' ? 'home' : 'controls'),
+    next: () => showPage(page === 'settings' ? 'home' : 'settings')
   }
 });
 window.addEventListener('gamepadconnected', () => { $('pad-hints').hidden = false; });
-window.addEventListener('keydown', event => { if (event.key === 'Escape' && page !== 'play') showPage('play'); });
+window.addEventListener('keydown', event => { if (event.key === 'Escape' && page !== 'home' && !capture) showPage('home'); });
 
 sync().then(() => { for (const line of current?.logs || []) appendLog(line); });

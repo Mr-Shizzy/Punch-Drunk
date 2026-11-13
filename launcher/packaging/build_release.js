@@ -1,10 +1,10 @@
 'use strict';
 
-// Builds the portable Windows release: one folder ("POW Recompiled") holding the launcher, zipped with that folder
-// inside, plus the zip's SHA-256. No installer: unzip anywhere and run "POW Recompiled Launcher.exe".
+// Builds the portable Windows release: one folder ("Punch-Drunk") holding the launcher, zipped with that folder
+// inside, plus the zip's SHA-256. No installer: unzip anywhere and run "Punch-Drunk.exe".
 //   1. runs the tests
 //   2. electron-builder --win dir (the unpacked app)
-//   3. copies it to dist\release\POW Recompiled, with the README and licence files
+//   3. copies it to disteleasePunch-Drunk, with the README and licence files
 //   4. runs the built exe's --selftest from a copy in a folder with a space in its path (proves it's portable)
 //   5. zips it (top folder inside) and writes <zip>.sha256
 //   6. deletes the intermediate folders, so the only exe left is the one in the release
@@ -19,10 +19,10 @@ const LAUNCHER = path.join(__dirname, '..');
 const DIST = path.join(LAUNCHER, 'dist');
 const UNPACKED = path.join(DIST, 'win-unpacked');
 const RELEASE = path.join(DIST, 'release');
-const FOLDER = 'POW Recompiled';
-const EXE = 'POW Recompiled Launcher.exe';
+const FOLDER = 'Punch-Drunk';
+const EXE = 'Punch-Drunk.exe';
 const version = require(path.join(LAUNCHER, 'package.json')).version;
-const ZIP = path.join(RELEASE, `POW-Recompiled-${version}-Windows-x64.zip`);
+const ZIP = path.join(RELEASE, `Punch-Drunk-${version}-Windows-x64.zip`);
 
 const step = text => console.log(`\n== ${text}`);
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: 'inherit', cwd: LAUNCHER, shell: false, ...opts });
@@ -50,7 +50,7 @@ for (const name of ['settings.json', 'data', 'temp', 'selftest_result.txt']) fs.
 
 step('Self-test from a folder with a space in its path');
 // (The build PC's temp folder: the project folder's own path may not be a plain one.)
-const trialRoot = path.join(require('node:os').tmpdir(), `pow self test ${process.pid}`);
+const trialRoot = path.join(require('node:os').tmpdir(), `punch drunk self test ${process.pid}`);
 const trial = path.join(trialRoot, FOLDER);
 fs.cpSync(out, trial, { recursive: true });
 let selfTestOk = true;
@@ -58,7 +58,7 @@ try { run(path.join(trial, EXE), ['--selftest']); } catch { selfTestOk = false; 
 const report = fs.readFileSync(path.join(trial, 'selftest_result.txt'), 'utf8');
 console.log(report);
 if (!selfTestOk || !report.includes('SELFTEST OK')) throw new Error('The built launcher failed its self-test.');
-if (!report.startsWith(`POW Recompiled Launcher ${version} packaged`)) throw new Error('The self-test names the wrong version.');
+if (!report.startsWith(`Punch-Drunk ${version} packaged`)) throw new Error('The self-test names the wrong version.');
 
 step('Checking for personal strings');
 const personal = [process.env.USERNAME, process.env.USERPROFILE].filter(v => v && v.length > 2).map(v => v.toLowerCase());

@@ -1,11 +1,11 @@
 {
-  "name": "pow-recompiled-launcher",
+  "name": "punch-drunk",
   "version": "0.3.1",
   "private": true,
-  "description": "POW: Recompiled!! (POW = Punch-Out!! Wii): a portable launcher that builds the Punch-Out!! (Wii) and Doc Louis's Punch-Out!! PC ports on your computer from your own copies",
+  "description": "Punch-Drunk: Punch-Out (Wii) Recomp. A portable launcher that builds the Punch-Out!! (Wii) and Doc Louis's Punch-Out!! PC ports on your computer from your own copies",
   "main": "src/main.js",
   "license": "MIT",
-  "author": "POW: Recompiled!! contributors",
+  "author": "Mr-Shizzy (fork of POW: Recompiled!!)",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -20,8 +20,8 @@
     "electron-builder": "^26.17.0"
   },
   "build": {
-    "appId": "dev.fistin.launcher",
-    "productName": "POW Recompiled Launcher",
+    "appId": "io.github.mrshizzy.punchdrunk",
+    "productName": "Punch-Drunk",
     "files": [
       "src/**/*",
       "package.json"
@@ -47,7 +47,7 @@
       "target": "AppImage",
       "category": "Game",
       "icon": "build/icon.png",
-      "artifactName": "POW-Recompiled-Launcher.${ext}",
+      "artifactName": "Punch-Drunk.${ext}",
       "executableArgs": [
         "--no-sandbox"
       ]
