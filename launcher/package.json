@@ -2,7 +2,7 @@
   "name": "pow-recompiled-launcher",
   "version": "0.3.1",
   "private": true,
-  "description": "POW: Recompiled!! (POW = Punch-Out!! Wii): sets up and launches the Punch-Out!! (Wii) PC port, built on your computer from your own disc",
+  "description": "POW: Recompiled!! (POW = Punch-Out!! Wii): a portable launcher that builds the Punch-Out!! (Wii) and Doc Louis's Punch-Out!! PC ports on your computer from your own copies",
   "main": "src/main.js",
   "license": "MIT",
   "author": "POW: Recompiled!! contributors",
@@ -13,7 +13,7 @@
     "start": "electron .",
     "test": "node --test test/wad.test.js",
     "dist": "electron-builder --linux AppImage",
-    "dist:win": "electron-builder --win nsis --x64"
+    "dist:win": "node packaging/build_release.js"
   },
   "devDependencies": {
     "electron": "^44.4.5",
@@ -55,24 +55,13 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "icon": "build/icon.png",
-      "artifactName": "POW-Recompiled-Launcher-Setup.${ext}",
-      "compression": "maximum"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "POW Recompiled!!",
-      "uninstallDisplayName": "POW: Recompiled!! Launcher",
-      "deleteAppDataOnUninstall": false
+      "icon": "build/icon.png"
     },
     "electronLanguages": [
       "en-US"

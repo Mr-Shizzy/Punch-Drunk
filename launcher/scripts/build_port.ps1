@@ -206,7 +206,12 @@ $gen = Join-Path $WS 'generated'
 
 # ---------------------------------------------------------------------------------------------------------------
 Step 4 'Building the translator'
-Run $DotnetExe @('build', (Join-Path $WS 'translator\src\Translator.Cli\Translator.Cli.csproj'), '-c', 'Release', '-v', 'quiet') 'translator build failed'
+# Portable: no build servers left running afterwards, and NuGet reads the launcher's own config (PO_NUGET_CONFIG)
+# instead of creating one in AppData.
+$dotnetBuild = @('build', (Join-Path $WS 'translator\src\Translator.Cli\Translator.Cli.csproj'), '-c', 'Release', '-v', 'quiet',
+    '--disable-build-servers', '-nodeReuse:false', '-p:UseSharedCompilation=false')
+if ($env:PO_NUGET_CONFIG) { $dotnetBuild += "-p:RestoreConfigFile=$($env:PO_NUGET_CONFIG)" }
+Run $DotnetExe $dotnetBuild 'translator build failed'
 $dll = Join-Path $WS 'translator\src\Translator.Cli\bin\Release\net8.0\Translator.Cli.dll'
 if (-not (Test-Path -LiteralPath $dll -PathType Leaf)) { Fail "the translator wasn't built ($dll)" }
 function Xlate([string[]]$Arguments, [string]$What) { Run $DotnetExe (@($dll) + $Arguments) $What }

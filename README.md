@@ -26,7 +26,7 @@ Get the launcher from the [latest release](https://gitlab.com/fist-in/POW-Recomp
 | --- | --- |
 | Linux (x86-64) | `POW-Recompiled-Launcher.AppImage` |
 | Steam Deck (SteamOS) | `POW-Recompiled-Launcher-SteamDeck.AppImage` |
-| Windows 10/11 (x64) | `POW-Recompiled-Launcher-Setup.exe` |
+| Windows 10/11 (x64) | `POW-Recompiled-<version>-Windows-x64.zip` (portable, no installer) |
 
 They're listed under **Packages** on the release. The Steam Deck launcher is the Linux one with its own build tools
 inside, so it's a bigger download, but SteamOS needs nothing installed.
@@ -35,8 +35,10 @@ inside, so it's a bigger download, but SteamOS needs nothing installed.
 
 1. Open the launcher.
    - Linux and Steam Deck: make the AppImage executable, then run it (on the Steam Deck, in Desktop Mode).
-   - Windows: run the installer. Windows may say "Windows protected your PC" because the installer isn't
-     code-signed; click **More info**, then **Run anyway**.
+   - Windows: unzip it to a folder with a plain path (letters, numbers, spaces, dots, dashes, underscores), for
+     example `C:\Games\POW Recompiled`, and run `POW Recompiled Launcher.exe`. It's portable: settings, build
+     tools, your games and saves all stay in that folder, and deleting the folder removes everything. Windows may
+     say "Windows protected your PC" because the program isn't code-signed; click **More info**, then **Run anyway**.
 2. Follow the three setup steps: get the build tools (Linux: install the packages it lists; Windows: press
    **Download build tools**; Steam Deck: they come with the launcher), choose your disc (ISO, WBFS or RVZ), and press
    **Build**. The first build takes a while; after that it's just **Play**.
@@ -72,7 +74,7 @@ Punch-Out!!: a WAD of your own copy (USA, WPCE01), your console's Wii common key
 | `port/` | The changes to WiiCompiled for both games (`punchout_region.patch`) and the translator projects (`projects/punchout`, `projects/doclouis`) | GPL-3.0 (as WiiCompiled) |
 
 To run the launcher from source: `cd launcher && npm install && npm start`. To build the Linux AppImage: `npm run dist`;
-the Windows installer: `npm run dist:win` (works on Linux too).
+the portable Windows zip: `npm run dist:win` (on Windows; it also self-tests the built launcher).
 
 ## Credits
 

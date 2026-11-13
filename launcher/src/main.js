@@ -92,30 +92,70 @@ const logLines = [];
 // ---------------------------------------------------------------------------------------------------------------
 // Config and paths
 
-const configFile = () => path.join(app.getPath('userData'), 'preferences.json');
-function loadConfig() {
-  // Preferences from before the renames ("Re-Punched Launcher", "Fist-In Launcher", "Punch-Out PC Launcher") carry
-  // over once.
-  const legacy = ['Re-Punched Launcher', 'Fist-In Launcher', 'Punch-Out PC Launcher']
-    .map(name => path.join(app.getPath('appData'), name, 'preferences.json')).find(file => fs.existsSync(file));
-  if (!fs.existsSync(configFile()) && legacy) {
-    try { fs.mkdirSync(path.dirname(configFile()), { recursive: true }); fs.copyFileSync(legacy, configFile()); } catch { /* start fresh */ }
+// Portable: everything lives in the program's own folder, found from where it runs (so the folder can be moved or
+// renamed): the launcher's settings.json, its data folder (tools, the unpacked games, builds, logs), Chromium's
+// profile and a temp folder per running copy. Nothing goes to AppData, the registry or the system temp folder.
+// Development (npm start): POW_PORTABLE_ROOT, or launcher/dev-portable.
+const PORTABLE_ROOT = app.isPackaged
+  ? path.dirname(process.env.APPIMAGE || process.execPath)
+  : path.resolve(process.env.POW_PORTABLE_ROOT || path.join(__dirname, '..', 'dev-portable'));
+const RUN_TEMP = path.join(PORTABLE_ROOT, 'temp', `run${process.pid}`);
+
+// Must run before the app is ready: Chromium's profile, crash dumps and Electron's temp folder.
+function usePortableFolders() {
+  const profile = path.join(PORTABLE_ROOT, 'data', 'launcher-profile');
+  fs.mkdirSync(profile, { recursive: true });
+  fs.mkdirSync(RUN_TEMP, { recursive: true });
+  app.setPath('userData', profile);
+  app.setPath('sessionData', profile);
+  app.setPath('crashDumps', path.join(profile, 'crashes'));
+  app.setPath('logs', path.join(profile, 'logs'));
+  app.setPath('temp', RUN_TEMP);
+  for (const name of ['TEMP', 'TMP', 'TMPDIR']) process.env[name] = RUN_TEMP;
+}
+// temp\run<pid> folders of copies that are no longer running.
+function sweepTemp() {
+  const base = path.join(PORTABLE_ROOT, 'temp');
+  let entries = [];
+  try { entries = fs.readdirSync(base); } catch { return; }
+  for (const name of entries) {
+    const m = /^run(\d+)$/.exec(name);
+    if (!m || Number(m[1]) === process.pid) continue;
+    let alive = false;
+    try { process.kill(Number(m[1]), 0); alive = true; } catch (err) { alive = err.code === 'EPERM'; }
+    if (!alive) { try { fs.rmSync(path.join(base, name), { recursive: true, force: true }); } catch { /* in use: next time */ } }
   }
+}
+function removeRunTemp() {
+  try { fs.rmSync(RUN_TEMP, { recursive: true, force: true }); } catch { /* next start sweeps it */ }
+}
+
+const configFile = () => path.join(PORTABLE_ROOT, 'settings.json');
+function loadConfig() {
   try { config = JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { config = {}; }
 }
+// Written to settings.json.tmp, then swapped in, so a crash never leaves half a file.
 function saveConfig() {
-  fs.mkdirSync(path.dirname(configFile()), { recursive: true });
-  fs.writeFileSync(configFile(), JSON.stringify(config, null, 2));
+  const tmp = configFile() + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(config, null, 2));
+  fs.renameSync(tmp, configFile());
 }
-// Installs from before the renames (Re-Punched, Fist-In, punchout-pc) stay where they are: their build folders hold
-// absolute paths, so moving them would mean building from scratch.
-const LOCAL_DATA = IS_WIN ? (process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'))
-  : path.join(os.homedir(), '.local', 'share');
-const DEFAULT_DATA_ROOT = path.join(LOCAL_DATA, IS_WIN ? 'POW-Recompiled' : 'pow-recompiled');
-const LEGACY_DATA_ROOTS = [path.join(LOCAL_DATA, IS_WIN ? 'Re-Punched' : 're-punched'),
-  path.join(LOCAL_DATA, IS_WIN ? 'Fist-In' : 'fist-in'), path.join(os.homedir(), '.local', 'share', 'punchout-pc')];
-const dataRoot = () => config.dataRoot || (fs.existsSync(DEFAULT_DATA_ROOT) ? DEFAULT_DATA_ROOT
-  : LEGACY_DATA_ROOTS.find(dir => fs.existsSync(dir)) || DEFAULT_DATA_ROOT);
+// A folder setting inside the program's folder is kept relative, so moving the folder keeps it working.
+const storePath = dir => {
+  const rel = path.relative(PORTABLE_ROOT, dir);
+  return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel : dir;
+};
+const loadPath = value => (value ? path.resolve(PORTABLE_ROOT, value) : null);
+const DEFAULT_DATA_ROOT = path.join(PORTABLE_ROOT, 'data');
+const dataRoot = () => loadPath(config.dataRoot) || DEFAULT_DATA_ROOT;
+// WiiCompiled's native build only takes plain paths; for any other it makes a junction under ProgramData, which a
+// portable program mustn't. So the data folder has to be a plain path (letters, digits, spaces, . _ -).
+const PLAIN_PATH = /^[A-Za-z0-9 ._\\:-]+$/;
+function checkPlainDataRoot() {
+  if (IS_WIN && !PLAIN_PATH.test(path.resolve(dataRoot()))) {
+    throw new Error(`The game can only be built in a folder whose path has just letters, numbers, spaces, dots, dashes and underscores. Move the launcher's folder somewhere like C:\\Games\\POW Recompiled (now: ${dataRoot()}).`);
+  }
+}
 const paths = () => {
   const root = dataRoot();
   return {
@@ -142,7 +182,7 @@ const gamePaths = (game = currentGame()) => {
 // The port's own files (the WiiCompiled patch and the Punch-Out project): bundled with the launcher, or a folder
 // chosen in Settings (for development: the recomp_wip folder).
 function portSource() {
-  const candidates = [config.portSource, process.env.PUNCHOUT_PORT_SOURCE,
+  const candidates = [loadPath(config.portSource), process.env.PUNCHOUT_PORT_SOURCE,
     path.join(process.resourcesPath || '', 'port-source'), path.join(__dirname, '..', 'port-source'),
     // The repository layout (launcher/ next to port/), and the development one (next to recomp_wip).
     path.join(__dirname, '..', '..', 'port'), path.join(__dirname, '..', '..', 'recomp_wip')];
@@ -202,10 +242,14 @@ function download(url, dest, onProgress = null, redirects = 5) {
       const total = Number(res.headers['content-length']) || 0;
       let got = 0;
       if (onProgress) res.on('data', chunk => { got += chunk.length; onProgress(got, total); });
-      const out = fs.createWriteStream(dest);
+      const part = dest + '.part';
+      const out = fs.createWriteStream(part);
       res.pipe(out);
-      out.on('finish', () => out.close(resolve));
-      out.on('error', reject);
+      out.on('finish', () => out.close(err => {
+        if (err) { reject(err); return; }
+        try { fs.renameSync(part, dest); resolve(); } catch (e) { reject(e); }
+      }));
+      out.on('error', err => { fs.rm(part, { force: true }, () => reject(err)); });
     }).on('error', reject);
   });
 }
@@ -335,7 +379,7 @@ async function unzip(archive, dest) {
   if (!r.ok) throw new Error(`Couldn't unpack ${path.basename(archive)}: ${r.stderr.trim() || r.error?.message}`);
 }
 async function fetchJson(url) {
-  const file = path.join(os.tmpdir(), `pow-recompiled-${process.pid}-${Date.now()}.json`);
+  const file = path.join(RUN_TEMP, `download-${Date.now()}.json`);
   try { await download(url, file); return JSON.parse(await fsp.readFile(file, 'utf8')); } finally { await fsp.rm(file, { force: true }); }
 }
 
@@ -489,6 +533,7 @@ function ensureDocConfig() {
   let text = '';
   try { text = fs.readFileSync(file, 'utf8'); } catch { /* new */ }
   text = toml.set(text, 'paths', 'title_content', gamePaths('doclouis').data);
+  text = toml.set(text, 'paths', 'shared_config', path.relative(path.dirname(file), paths().gameConfig).split(path.sep).join('/'));
   fs.writeFileSync(file, text);
 }
 
@@ -554,6 +599,34 @@ async function buildState(game = currentGame()) {
   return { built, binary, info, outdated: built && ((current && info.patch !== current) || renamed) };
 }
 
+// Build tools write caches and settings to the user's profile (NuGet's packages and its NuGet.Config in AppData,
+// .NET's first-run files, CMake's and clang's temp files). For the build they get a home inside the data folder, so
+// nothing lands outside the program's folder.
+function buildEnvironment() {
+  const home = path.join(dataRoot(), 'build-home');
+  const env = {
+    TEMP: path.join(RUN_TEMP, 'build'), TMP: path.join(RUN_TEMP, 'build'), TMPDIR: path.join(RUN_TEMP, 'build'),
+    DOTNET_CLI_HOME: home, NUGET_PACKAGES: path.join(home, 'nuget', 'packages'),
+    NUGET_HTTP_CACHE_PATH: path.join(home, 'nuget', 'http-cache'), NUGET_PLUGINS_CACHE_PATH: path.join(home, 'nuget', 'plugins-cache'),
+    PO_NUGET_CONFIG: path.join(home, 'nuget', 'NuGet.Config'),
+    DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1', DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false',
+    MSBUILDDISABLENODEREUSE: '1', DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1', UseSharedCompilation: 'false',
+    CMAKE_EXPORT_NO_PACKAGE_REGISTRY: 'ON'
+  };
+  if (IS_WIN) {
+    Object.assign(env, { USERPROFILE: home, HOME: home, APPDATA: path.join(home, 'AppData', 'Roaming'),
+      LOCALAPPDATA: path.join(home, 'AppData', 'Local') });
+  } else {
+    Object.assign(env, { XDG_CACHE_HOME: path.join(home, '.cache'), XDG_CONFIG_HOME: path.join(home, '.config') });
+  }
+  for (const dir of [env.TEMP, path.join(home, 'nuget'), env.APPDATA, env.LOCALAPPDATA]) if (dir) fs.mkdirSync(dir, { recursive: true });
+  // Only nuget.org, and NuGet reads this file instead of making one in AppData.
+  if (!fs.existsSync(env.PO_NUGET_CONFIG)) {
+    fs.writeFileSync(env.PO_NUGET_CONFIG, '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <packageSources>\n    <clear />\n    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />\n  </packageSources>\n</configuration>\n');
+  }
+  return env;
+}
+
 async function build() {
   const game = currentGame();
   const p = gamePaths(game);
@@ -568,6 +641,7 @@ async function build() {
     tools = IS_WIN ? await installWindowsTools() : await installBuildroot();
   }
   if (!tools.ok) throw new Error(`Missing build tools: ${tools.missing.join(', ')}.`);
+  checkPlainDataRoot();
   if (game === 'punchout' && !await discExtracted()) await extractDisc();
   if (game === 'doclouis' && !docReady()) throw new Error("Unpack your Doc Louis's Punch-Out!! WAD first (step 2).");
   await fsp.mkdir(p.logs, { recursive: true });
@@ -577,7 +651,7 @@ async function build() {
   // The other game's WiiCompiled clone, if there is one, is copied instead of downloading it again.
   const other = gamePaths(game === 'punchout' ? 'doclouis' : 'punchout');
   const seed = path.join(other.work, 'wiicompiled');
-  const env = { ...process.env, PO_GAME: game, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.data, PO_PORT: p.port, PO_LOGS: p.logs,
+  const env = { ...process.env, ...buildEnvironment(), PO_GAME: game, PO_SRC: src, PO_WORK: p.work, PO_DATA: p.data, PO_PORT: p.port, PO_LOGS: p.logs,
     NINJA_STATUS: '[%f/%t] ', ...(fs.existsSync(path.join(seed, '.git')) ? { PO_SEED: seed } : {}) };
   let cmd = 'bash', args = [buildScript()], buildLog = null;
   if (STEAM_DECK) {
@@ -839,8 +913,8 @@ function registerHandlers() {
   ipcMain.handle('choose-folder', async (_e, which) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
     if (r.canceled || !r.filePaths[0]) return null;
-    if (which === 'dataRoot') config.dataRoot = r.filePaths[0];
-    if (which === 'portSource') config.portSource = r.filePaths[0];
+    if (which === 'dataRoot') config.dataRoot = storePath(r.filePaths[0]);
+    if (which === 'portSource') config.portSource = storePath(r.filePaths[0]);
     saveConfig();
     send('state-changed');
     return r.filePaths[0];
@@ -947,14 +1021,70 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
-if (!app.requestSingleInstanceLock()) {
+// --selftest: checks this copy without opening a window (after every build, and for "is my install OK?"): its folder
+// is writable, the port's files and build scripts are there, and the WAD unpacker works (on a made-up WAD and key).
+// Writes selftest_result.txt beside the program; exit code 0 = OK.
+async function selfTest() {
+  const lines = [`POW Recompiled Launcher ${app.getVersion()} ${app.isPackaged ? 'packaged' : 'development'}`];
+  const check = async (name, fn) => {
+    try { const note = await fn(); lines.push(`OK   ${name}${note ? ': ' + note : ''}`); }
+    catch (err) { lines.push(`FAIL ${name}: ${err.message}`); }
+  };
+  await check('program folder is writable', () => {
+    const probe = path.join(PORTABLE_ROOT, `.write-test-${process.pid}`);
+    fs.writeFileSync(probe, 'ok');
+    fs.rmSync(probe);
+  });
+  await check("the port's files", () => {
+    const src = portSource();
+    if (!src) throw new Error('punchout_region.patch not found');
+    for (const game of Object.keys(GAMES)) if (!fs.existsSync(path.join(src, 'projects', game, 'MAP.txt'))) throw new Error(`projects/${game} missing`);
+  });
+  await check('build script', () => { if (!fs.existsSync(buildScript())) throw new Error(`${path.basename(buildScript())} missing`); });
+  await check('WAD unpacker', async () => {
+    const key = crypto.randomBytes(16);
+    const contents = [{ id: 0, data: crypto.randomBytes(5000) }, { id: 1, data: crypto.randomBytes(40000) }];
+    const dir = path.join(RUN_TEMP, 'selftest');
+    fs.mkdirSync(dir, { recursive: true });
+    const wadFile = path.join(dir, 'test.wad');
+    fs.writeFileSync(wadFile, wad.buildTestWad(key, contents));
+    try {
+      await wad.unpackWad(wadFile, Buffer.from(key), path.join(dir, 'title'), { titleId: DOC_TITLE_ID });
+      if (!fs.readFileSync(path.join(dir, 'title', '00000001.app')).equals(contents[1].data)) throw new Error('unpacked data differs');
+      let refused = false;
+      try { await wad.unpackWad(wadFile, crypto.randomBytes(16), path.join(dir, 'title2')); } catch (err) { refused = err.code === 'wrong-key'; }
+      if (!refused) throw new Error('a wrong key was not refused');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+  // Not a failure: the launcher works anywhere; only building needs a plain path (it says so when you build).
+  try { checkPlainDataRoot(); lines.push(`OK   data folder path is plain: ${dataRoot()}`); }
+  catch { lines.push(`WARN data folder path has characters the game build can't use (move the folder to build): ${dataRoot()}`); }
+  const ok = !lines.some(l => l.startsWith('FAIL'));
+  lines.push(ok ? 'SELFTEST OK' : 'SELFTEST FAILED');
+  fs.writeFileSync(path.join(PORTABLE_ROOT, 'selftest_result.txt'), lines.join('\r\n') + '\r\n');
+  return ok;
+}
+
+usePortableFolders();
+if (process.argv.includes('--selftest')) {
+  app.whenReady().then(async () => {
+    sweepTemp();
+    loadConfig();
+    let ok = false;
+    try { ok = await selfTest(); } catch { ok = false; }
+    removeRunTemp();
+    app.exit(ok ? 0 : 1);
+  });
+} else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(() => {
+    sweepTemp();
     loadConfig();
     registerHandlers();
     createWindow();
   });
   app.on('window-all-closed', () => { stopChild(); app.quit(); });
+  app.on('will-quit', removeRunTemp);
 }

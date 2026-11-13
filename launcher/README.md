@@ -30,8 +30,9 @@ into the AppImage), `../recomp_wip` (development), a folder chosen in Settings >
    reads the shared ones (controls, mouse lock, graphics, sound, button prompts) from there. Difficulty and
    Archipelago are Punch-Out!!'s only.
 
-Linux and Windows. Packaging: `npm run dist` (Linux AppImage), `npm run dist:win` (Windows installer; builds on
-Linux too). On Windows the launcher downloads its own Git (MinGit) and .NET 8 SDK into its tools folder, offers
+Linux and Windows. Packaging: `npm run dist` (Linux AppImage), `npm run dist:win` (the portable Windows zip,
+`packaging/build_release.js`). Portable on Windows: settings.json, data and temp beside the exe, nothing in AppData;
+build tools get a home inside data for their caches. The launcher downloads its own Git (MinGit) and .NET 8 SDK into its tools folder, offers
 Microsoft's Visual C++ runtime installer if it's missing, and `scripts/build_port.ps1` gets the compiler, CMake and
 Ninja through WiiCompiled's own pinned Windows scripts.
 

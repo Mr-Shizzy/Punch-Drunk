@@ -9,51 +9,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { parseKey, readWad, unpackWad, describeWad } = require('../src/wad');
-
-const align = (n, a = 0x40) => Math.ceil(n / a) * a;
-const pad = (buf, a = 0x40) => Buffer.concat([buf, Buffer.alloc(align(buf.length, a) - buf.length)]);
-function aesEnc(key, iv, data) {
-  const c = crypto.createCipheriv('aes-128-cbc', key, iv);
-  c.setAutoPadding(false);
-  return Buffer.concat([c.update(data), c.final()]);
-}
-
-// A minimal WAD: header, cert chain (filler), ticket, TMD, then each content encrypted with the title key.
-function makeWad(commonKey, contents, { titleId = '0001000157504345', keyIndex = 0 } = {}) {
-  const tid = Buffer.from(titleId, 'hex');
-  const titleKey = crypto.randomBytes(16);
-  const ticket = Buffer.alloc(0x2A4);
-  ticket.writeUInt32BE(0x00010001, 0);
-  tid.copy(ticket, 0x1DC);
-  ticket[0x1F1] = keyIndex;
-  aesEnc(commonKey, Buffer.concat([tid, Buffer.alloc(8)]), titleKey).copy(ticket, 0x1BF);
-  const tmd = Buffer.alloc(0x1E4 + 36 * contents.length);
-  tid.copy(tmd, 0x18C);
-  tmd.writeUInt16BE(contents.length, 0x1DE);
-  const data = [];
-  contents.forEach((c, i) => {
-    const r = 0x1E4 + 36 * i;
-    tmd.writeUInt32BE(c.id, r);
-    tmd.writeUInt16BE(i, r + 4);
-    tmd.writeUInt16BE(c.shared ? 0x8001 : 1, r + 6);
-    tmd.writeBigUInt64BE(BigInt(c.data.length), r + 8);
-    crypto.createHash('sha1').update(c.data).digest().copy(tmd, r + 16);
-    const iv = Buffer.alloc(16);
-    iv.writeUInt16BE(i, 0);
-    data.push(pad(aesEnc(titleKey, iv, pad(c.data, 16))));
-  });
-  const cert = Buffer.alloc(0xA00, 0xCC);
-  const body = Buffer.concat(data);
-  const header = Buffer.alloc(0x20);
-  header.writeUInt32BE(0x20, 0);
-  header.write('Is', 4, 'latin1');
-  header.writeUInt32BE(cert.length, 0x08);
-  header.writeUInt32BE(ticket.length, 0x10);
-  header.writeUInt32BE(tmd.length, 0x14);
-  header.writeUInt32BE(body.length, 0x18);
-  return Buffer.concat([pad(header), pad(cert), pad(ticket), pad(tmd), body]);
-}
+const { parseKey, readWad, unpackWad, describeWad, buildTestWad: makeWad } = require('../src/wad');
 
 const sample = () => [
   { id: 0, data: crypto.randomBytes(1000) },
