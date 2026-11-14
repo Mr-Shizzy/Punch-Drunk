@@ -793,6 +793,8 @@ function ensureGameConfig() {
   text = toml.set(text, 'paths', 'dvd_root', p.disc);
   // The frame-rate counter is off unless the player turns it on (the game itself defaults to on).
   if (toml.get(text, 'video', 'show_fps') === undefined) text = toml.set(text, 'video', 'show_fps', false);
+  // Keep the picture's shape on wide windows (black bars) rather than stretching it. Only when never chosen.
+  if (toml.get(text, 'video', 'force_aspect') === undefined) text = toml.set(text, 'video', 'force_aspect', true);
   fs.writeFileSync(p.gameConfig, text);
 }
 
@@ -816,7 +818,7 @@ function readGameSettings() {
     // Same keys and defaults as WiiCompiled's F10 Graphics menu (runtime_config.h).
     graphics: {
       widescreen: get('video', 'widescreen', true) !== false,
-      forceAspect: get('video', 'force_aspect', false) === true,
+      forceAspect: get('video', 'force_aspect', true) === true, // true until chosen (ensureGameConfig writes it at Play)
       nativeEffects: get('video', 'native_effect_copies', false) === true,
       showFps: get('video', 'show_fps', false) === true,
       smoothEdges: Number(get('video', 'msaa', 1)) === 4, // anti-aliasing: msaa 4 = on, 1 = off

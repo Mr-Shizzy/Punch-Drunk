@@ -26,6 +26,7 @@ You bring your own copies of the games. No game files are included.
 - **Show frame rate** switch in Settings (off by default).
 - **Anti-aliasing** setting: Off or 4×.
 - **Clearer resolution labels:** each choice shows its pixel height (Native 480p, 720p, 960p, 1440p, 1920p, 2880p, 3840p), plus a line spelling out the exact size.
+- **Lock aspect ratio is on by default** for new setups, so on a wide or ultrawide window the picture keeps its shape with black bars instead of stretching. You can turn it off in Settings. (It doesn't add extra scenery on the sides.)
 - **Archipelago** now has a short explanation in Settings. It's optional and only for people joining a randomizer group.
 
 ## Look
