@@ -819,6 +819,7 @@ function readGameSettings() {
       forceAspect: get('video', 'force_aspect', false) === true,
       nativeEffects: get('video', 'native_effect_copies', false) === true,
       showFps: get('video', 'show_fps', false) === true,
+      smoothEdges: Number(get('video', 'msaa', 1)) === 4, // anti-aliasing: msaa 4 = on, 1 = off
       resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
       displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
     },
@@ -864,6 +865,7 @@ function writeGameSettings(s) {
     if (typeof g.forceAspect === 'boolean') text = toml.set(text, 'video', 'force_aspect', g.forceAspect);
     if (typeof g.nativeEffects === 'boolean') text = toml.set(text, 'video', 'native_effect_copies', g.nativeEffects);
     if (typeof g.showFps === 'boolean') text = toml.set(text, 'video', 'show_fps', g.showFps);
+    if (typeof g.smoothEdges === 'boolean') text = toml.set(text, 'video', 'msaa', g.smoothEdges ? 4 : 1);
     if (GRAPHICS_RESOLUTIONS.includes(g.resolution)) text = toml.set(text, 'video', 'resolution_multiplier', g.resolution);
     if (GRAPHICS_DISPLAY_MODES.includes(g.displayMode)) text = toml.set(text, 'video', 'display_mode', g.displayMode);
   }

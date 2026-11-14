@@ -206,6 +206,7 @@ function renderSettings(s) {
   $('force-aspect').checked = g.forceAspect;
   $('native-effects').checked = g.nativeEffects;
   $('show-fps').checked = g.showFps;
+  $('smooth-edges').checked = g.smoothEdges;
   $('resolution-note').textContent = resolutionNote(g);
   $('graphics-note').textContent = s.running
     ? 'The game is running, so changes here apply the next time it starts. To change them now, press F10 in the game.'
@@ -548,6 +549,7 @@ for (const group of document.querySelectorAll('.segmented[data-setting]')) {
 }
 $('force-aspect').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { forceAspect: $('force-aspect').checked } })));
 $('native-effects').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { nativeEffects: $('native-effects').checked } })));
+$('smooth-edges').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { smoothEdges: $('smooth-edges').checked } })));
 $('show-fps').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { showFps: $('show-fps').checked } })));
 
 // Window.
