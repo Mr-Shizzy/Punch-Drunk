@@ -176,7 +176,13 @@
           </div>
         </div>
         <p class="muted small" id="resolution-note"></p>
-        <label class="switch"><input type="checkbox" id="smooth-edges"><span>Smooth jagged edges <span class="muted">· anti-aliasing (4×). Needs a stronger graphics card, most of all at high resolutions. Takes effect the next time the game starts</span></span></label>
+        <div class="setting">
+          <span class="label">Anti-aliasing</span>
+          <div class="segmented" role="radiogroup" aria-label="Anti-aliasing" data-setting="antialiasing">
+            <button class="seg" data-value="1">Off</button>
+            <button class="seg" data-value="4">4×</button>
+          </div>
+        </div>
         <label class="switch"><input type="checkbox" id="native-effects"><span>Effects at native resolution <span class="muted">· softer glow and blur, much easier on weaker graphics cards</span></span></label>
         <label class="switch"><input type="checkbox" id="show-fps"><span>Show frame rate <span class="muted">· the small counter in the corner of the game</span></span></label>
         <div class="setting">
