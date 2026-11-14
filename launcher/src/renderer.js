@@ -75,22 +75,22 @@ function renderTask(task) {
 
 // ---- main render ----
 const GAME_IDS = ['punchout', 'doclouis'];
-// A game's card: Play when it's built, otherwise Set up. Building an update is offered under the status line.
+// A game's card: Play when it's built, Update game when a newer version is waiting, otherwise Set up.
 function renderHome(s) {
   for (const id of GAME_IDS) {
     const g = s.games[id];
     const runningThis = s.running && s.game === id;
     const btn = $(`action-${id}`);
-    btn.textContent = runningThis ? 'Playing' : g.built ? 'Play' : 'Set up';
+    const needsUpdate = g.built && g.outdated;
+    btn.textContent = runningThis ? 'Playing' : needsUpdate ? 'Update game' : g.built ? 'Play' : 'Set up';
     btn.classList.toggle('play', g.built);
     btn.disabled = s.busy || s.running;
     const state = $(`state-${id}`);
     state.textContent = runningThis ? 'Running. Close the game to come back here.'
-      : g.built ? (g.outdated ? 'Ready. An update to the port is available.' : 'Ready')
+      : g.built ? (g.outdated ? 'A newer version is ready to install. It takes a while.' : 'Ready')
       : g.haveCopy ? 'Ready to build' : id === 'punchout' ? 'Needs your disc' : 'Needs your WAD';
     state.classList.toggle('ready', g.built && !runningThis);
     state.classList.toggle('todo', !g.built);
-    $(`update-${id}`).hidden = !(g.built && g.outdated) || s.busy || s.running;
   }
   const ap = s.settings.archipelago;
   $('ap-badge').hidden = !ap.enabled; // Archipelago is Punch-Out!!'s only
@@ -422,10 +422,10 @@ for (const id of GAME_IDS) {
     $('disc-error').hidden = true;
     const s = await api.selectGame(id);
     render(s);
-    if (s.games[id].built) await api.play();
+    if (s.games[id].built && s.games[id].outdated) await api.build();
+    else if (s.games[id].built) await api.play();
     else showPage('setup');
   }));
-  $(`update-${id}`).addEventListener('click', () => guarded(async () => { render(await api.selectGame(id)); await api.build(); }));
 }
 // Doc Louis's: the WAD, then the key to unpack it (the pasted key is cleared from the box straight away).
 const docProblem = res => { if (res && !res.ok && !res.canceled) { $('disc-error').textContent = res.problem; $('disc-error').hidden = false; } };
