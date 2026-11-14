@@ -82,21 +82,46 @@ input:disabled { opacity: .5; }
 .path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted);
   background: var(--bg); padding: 7px 10px; border-radius: 8px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 
-/* Home: a card per game */
-.game-card { display: flex; align-items: center; gap: 16px; background: var(--surface); border-radius: 12px;
-  padding: 20px 22px; margin-bottom: 12px; }
-.game-info { flex: 1; min-width: 0; }
-.game-title { font-size: 19px; font-weight: 600; }
-.game-state { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.game-state.ready { color: var(--green); }
-.game-state.ready::before { content: "\2713  "; }
-.game-state.todo { color: var(--amber); }
-.game-btn { min-width: 120px; padding: 11px 22px; font-size: 15px; background: transparent; border: 1px solid #5f5e5a; }
+/* Home: two full-height panels, one per game. Each uses the game's own logo and a still from its videos once they
+   have been made from the player's copy (see art.js); until then it is a plain dark panel with the title. */
+.viewport.bleed { padding: 0; overflow: hidden; }
+#page-home { max-width: none; margin: 0; height: 100%; }
+#page-home.active { display: flex; flex-direction: column; }
+.split { flex: 1; min-height: 0; position: relative; display: flex; }
+.panel { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 26px 32px 28px; overflow: hidden; background: var(--surface) center top / cover no-repeat; background-image: var(--art, none); }
+.panel::before { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(23,22,28,.55) 0%, rgba(23,22,28,0) 30%, rgba(23,22,28,.15) 52%, rgba(23,22,28,.94) 82%, #17161c 100%); }
+.panel > * { position: relative; }
+#card-punchout { background-position: 50% 0; }
+#card-doclouis { background-position: 40% 0; }
+.panel-logo { display: block; margin: 0 auto; width: min(270px, 70%); filter: drop-shadow(0 3px 8px rgba(0,0,0,.6)); }
+.panel-top .game-title { text-align: center; font-size: 26px; font-weight: 600; padding-top: 8px; }
+.panel-logo:not([hidden]) + .game-title { display: none; }
+.panel-bottom { display: flex; flex-direction: column; gap: 12px; }
+#card-doclouis .panel-bottom { align-items: flex-end; text-align: right; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#card-doclouis .chips { justify-content: flex-end; }
+.chip { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #e9dfc8; background: rgba(23,22,28,.72);
+  border: 1px solid #4a4654; border-radius: 5px; padding: 4px 9px; }
+.chip.gold { color: var(--gold); border-color: #8a6a1f; }
+.rule { width: 3px; background: var(--gold); flex: none; z-index: 2; }
+.panel .game-state { font-size: 13px; color: var(--muted); margin: 0; }
+.panel .game-state.todo { color: var(--amber); }
+.game-btn { width: 100%; padding: 13px 0; font-size: 17px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  background: rgba(23,22,28,.7); border: 1px solid #5f5e5a; }
 .game-btn:hover:not(:disabled) { background: var(--surface-2); }
 .game-btn.play { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
 .game-btn.play:hover:not(:disabled) { background: var(--gold-hover); }
-.game-more { margin-top: 6px; }
-.home-note { color: var(--muted); font-size: 12px; text-align: center; margin-top: 18px; }
+.home-note { flex: none; margin: 0; padding: 7px 24px; text-align: center; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+.medal { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%;
+  background: var(--bg); border: 3px solid var(--gold); display: flex; align-items: center; justify-content: center; z-index: 3; perspective: 240px; }
+.coin { width: 50px; height: 50px; position: relative; transform-style: preserve-3d; animation: turn 7s linear infinite; color: var(--gold); }
+.coin img, .coin svg { position: absolute; inset: 0; width: 100%; height: 100%; backface-visibility: hidden; }
+.coin svg { backface-visibility: visible; }
+.coin #medal-back { transform: rotateY(180deg); }
+@keyframes turn { to { transform: rotateY(360deg); } }
+@media (prefers-reduced-motion: reduce) { .coin { animation: none; } }
 .ap-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--muted); }
 .ap-badge img { width: 16px; height: 16px; }
 .ap-badge.connected { color: var(--green); }

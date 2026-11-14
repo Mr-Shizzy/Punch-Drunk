@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file:; style-src 'self'; script-src 'self'">
   <title>Punch-Drunk: Punch-Out (Wii) Recomp</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -30,23 +30,40 @@
     </div>
   </header>
 
-  <main class="viewport">
+  <main class="viewport bleed">
     <!-- Home: one card per game -->
     <section class="page active" id="page-home">
-      <div class="game-card" id="card-punchout">
-        <div class="game-info">
-          <div class="game-title">Punch-Out!!</div>
-          <div class="game-state" id="state-punchout"></div>
-          <div class="ap-badge" id="ap-badge" hidden><img src="assets/archipelago.png" alt=""><span id="ap-badge-text">Archipelago</span></div>
+      <div class="split">
+        <div class="panel game-card" id="card-punchout">
+          <div class="panel-top">
+            <img class="panel-logo" id="logo-punchout" alt="Punch-Out!!" hidden>
+            <div class="game-title" id="title-punchout">Punch-Out!!</div>
+          </div>
+          <div class="panel-bottom">
+            <div class="ap-badge" id="ap-badge" hidden><img src="assets/archipelago.png" alt=""><span id="ap-badge-text">Archipelago</span></div>
+            <div class="chips"><span class="chip gold">Wii</span><span class="chip">2009</span><span class="chip">Next Level Games</span></div>
+            <div class="game-state" id="state-punchout"></div>
+            <button class="game-btn" id="action-punchout">Set up</button>
+          </div>
         </div>
-        <button class="game-btn" id="action-punchout">Set up</button>
-      </div>
-      <div class="game-card" id="card-doclouis">
-        <div class="game-info">
-          <div class="game-title">Doc Louis's Punch-Out!!</div>
-          <div class="game-state" id="state-doclouis"></div>
+        <div class="rule"></div>
+        <div class="panel game-card" id="card-doclouis">
+          <div class="panel-top">
+            <img class="panel-logo" id="logo-doclouis" alt="Doc Louis's Punch-Out!!" hidden>
+            <div class="game-title" id="title-doclouis">Doc Louis's Punch-Out!!</div>
+          </div>
+          <div class="panel-bottom">
+            <div class="chips"><span class="chip gold">WiiWare</span><span class="chip">Oct 27, 2009</span><span class="chip">Club Nintendo reward</span></div>
+            <div class="game-state" id="state-doclouis"></div>
+            <button class="game-btn" id="action-doclouis">Set up</button>
+          </div>
         </div>
-        <button class="game-btn" id="action-doclouis">Set up</button>
+        <div class="medal" aria-hidden="true">
+          <div class="coin">
+            <img id="medal-front" alt="" hidden><img id="medal-back" alt="" hidden>
+            <svg id="medal-fallback" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m24 11 3.5 8.2 8.8.6-6.7 5.8 2.1 8.6L24 29.4l-7.7 4.8 2.1-8.6-6.7-5.8 8.8-.6Z" fill="currentColor"/></svg>
+          </div>
+        </div>
       </div>
       <p class="home-note">Bring your own copies. No game data is included, and everything stays in this program's folder.</p>
     </section>

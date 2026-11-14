@@ -17,6 +17,7 @@ function showPage(name) {
   $('nav-controls').classList.toggle('active', name === 'controls');
   $('nav-settings').classList.toggle('active', name === 'settings');
   $('nav-back').hidden = name === 'home';
+  document.querySelector('.viewport').classList.toggle('bleed', name === 'home');
   $('page-title').textContent = name === 'setup' && current ? `Set up ${current.games[current.game].name}` : PAGE_TITLES[name] || '';
   // The game writes settings too (F10): show the file's current values whenever these pages are opened.
   if (changed && (name === 'settings' || name === 'controls')) sync();
@@ -73,6 +74,25 @@ function renderTask(task) {
   setStatus(task.detail ? `${task.label}: ${task.detail}` : task.label);
 }
 
+// The pictures made from the player's own copies (src/art.js): each panel's logo and background, and the medal if
+// there is one. Without them the panels are plain and the medal is a drawn star.
+function renderArt(art) {
+  for (const id of GAME_IDS) {
+    const logo = $(`logo-${id}`);
+    if (art[`${id}Logo`]) logo.src = art[`${id}Logo`];
+    logo.hidden = !art[`${id}Logo`];
+    const card = $(`card-${id}`);
+    if (art[`${id}Bg`]) card.style.setProperty('--art', `url("${art[`${id}Bg`]}")`);
+    else card.style.removeProperty('--art');
+  }
+  for (const id of ['medal-front', 'medal-back']) {
+    const img = $(id);
+    if (art.medal) img.src = art.medal;
+    img.hidden = !art.medal;
+  }
+  $('medal-fallback').hidden = Boolean(art.medal);
+}
+
 // ---- main render ----
 const GAME_IDS = ['punchout', 'doclouis'];
 // A game's card: Play when it's built, Update game when a newer version is waiting, otherwise Set up.
@@ -85,13 +105,16 @@ function renderHome(s) {
     btn.textContent = runningThis ? 'Playing' : needsUpdate ? 'Update game' : g.built ? 'Play' : 'Set up';
     btn.classList.toggle('play', g.built);
     btn.disabled = s.busy || s.running;
+    // A line of status only when something needs attention; a game that is ready just has its Play button.
     const state = $(`state-${id}`);
-    state.textContent = runningThis ? 'Running. Close the game to come back here.'
-      : g.built ? (g.outdated ? 'A newer version is ready to install. It takes a while.' : 'Ready')
+    const text = runningThis ? 'Running. Close the game to come back here.'
+      : g.built ? (g.outdated ? 'A newer version is ready to install. It takes a while.' : '')
       : g.haveCopy ? 'Ready to build' : id === 'punchout' ? 'Needs your disc' : 'Needs your WAD';
-    state.classList.toggle('ready', g.built && !runningThis);
+    state.textContent = text;
+    state.hidden = text === '';
     state.classList.toggle('todo', !g.built);
   }
+  renderArt(s.art || {});
   const ap = s.settings.archipelago;
   $('ap-badge').hidden = !ap.enabled; // Archipelago is Punch-Out!!'s only
   $('ap-badge').classList.toggle('connected', Boolean(ap.connected));

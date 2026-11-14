@@ -15,6 +15,8 @@ const https = require('node:https');
 const os = require('node:os');
 const path = require('node:path');
 const toml = require('./toml-edit');
+const art = require('./art');
+const { pathToFileURL } = require('node:url');
 const wad = require('./wad');
 
 // The one supported disc: Punch-Out!! (USA), its main.dol.
@@ -892,7 +894,45 @@ async function gamesState() {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Pictures for the home screen (made from the player's own copies, see art.js), in <data>/art
+
+const artDir = () => path.join(dataRoot(), 'art');
+const artTried = new Set();
+
+// Makes whatever pictures are missing and their sources exist, once per change in what exists, without holding up the window.
+function maybeMakeArt() {
+  const sources = { filesDir: path.join(paths().disc, 'files'), docBanner: path.join(gamePaths('doclouis').data, '00000000.app'), outDir: artDir() };
+  const missing = Object.values(art.NAMES).filter(name => !fs.existsSync(path.join(sources.outDir, name)));
+  if (missing.length === 0) return;
+  const key = [sources.filesDir, fs.existsSync(sources.filesDir), sources.docBanner, fs.existsSync(sources.docBanner), ...missing].join('|');
+  if (artTried.has(key)) return;
+  artTried.add(key);
+  setImmediate(() => {
+    try {
+      const result = art.buildArt(sources);
+      for (const problem of result.problems) log(`[art] ${problem}`);
+      if (result.made.length > 0) send('state-changed');
+    } catch (err) {
+      log(`[art] ${err.message}`);
+    }
+  });
+}
+
+// The pictures that exist, as addresses the window can load. medal.png is optional and only ever the player's own.
+function artState() {
+  const out = {};
+  const files = { punchoutLogo: art.NAMES.punchoutLogo, punchoutBg: art.NAMES.punchoutBg,
+    doclouisLogo: art.NAMES.doclouisLogo, doclouisBg: art.NAMES.doclouisBg, medal: 'medal.png' };
+  for (const [key, name] of Object.entries(files)) {
+    const file = path.join(artDir(), name);
+    try { out[key] = `${pathToFileURL(file).href}?${Math.round(fs.statSync(file).mtimeMs)}`; } catch { /* not made yet */ }
+  }
+  return out;
+}
+
 async function state() {
+  maybeMakeArt();
   const game = currentGame();
   const tools = await checkTools();
   const extracted = game === 'punchout' ? await discExtracted() : docReady();
@@ -911,6 +951,7 @@ async function state() {
     dataRoot: dataRoot(),
     steamDeck: STEAM_DECK,
     running: gameRunning, busy: Boolean(child) && !gameRunning,
+    art: artState(),
     task, settings: readGameSettings(), version: app.getVersion(),
     logs: logLines.slice(-400)
   };

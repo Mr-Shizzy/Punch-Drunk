@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/wad.test.js",
+    "test": "node --test test/wad.test.js test/art.test.js",
     "dist": "electron-builder --linux AppImage",
     "dist:win": "node packaging/build_release.js",
     "fetch:vcruntime": "node packaging/fetch_vcruntime.js"
