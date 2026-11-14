@@ -99,9 +99,9 @@ input:disabled { opacity: .5; }
 .panel-top .game-title { text-align: center; font-size: 26px; font-weight: 600; padding-top: 8px; }
 .panel-logo:not([hidden]) + .game-title { display: none; }
 .panel-bottom { display: flex; flex-direction: column; gap: 12px; }
-#card-doclouis .panel-bottom { align-items: flex-end; text-align: right; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-#card-doclouis .chips { justify-content: flex-end; }
+.panel-bottom { align-items: center; text-align: center; }
+.panel-bottom .game-btn { align-self: stretch; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .chip { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #e9dfc8; background: rgba(23,22,28,.72);
   border: 1px solid #4a4654; border-radius: 5px; padding: 4px 9px; }
 .chip.gold { color: var(--gold); border-color: #8a6a1f; }
@@ -174,6 +174,8 @@ pre { background: var(--bg); padding: 9px 11px; border-radius: 8px; overflow-x: 
 /* Controls */
 .segmented { display: inline-flex; flex-wrap: wrap; background: var(--bg); padding: 3px; border-radius: 9px; gap: 2px; }
 .seg { background: none; padding: 6px 12px; color: var(--muted); font-weight: 400; }
+.seg small { display: block; font-size: 11px; font-weight: 400; opacity: .75; margin-top: 1px; }
+.seg.active small { opacity: .85; }
 .seg:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .seg.active, .seg.active:hover:not(:disabled) { background: var(--gold); color: var(--on-gold); font-weight: 600; }
 .controls-table { width: 100%; border-collapse: collapse; }

@@ -165,16 +165,17 @@
         <div class="setting">
           <span class="label">Resolution</span>
           <div class="segmented" role="radiogroup" aria-label="Render resolution" data-setting="resolution">
-            <button class="seg" data-value="0" title="Matches the window size">Auto</button>
-            <button class="seg" data-value="1" title="The Wii's own resolution">Native</button>
-            <button class="seg" data-value="1.5">1.5×</button>
-            <button class="seg" data-value="2">2×</button>
-            <button class="seg" data-value="3">3×</button>
-            <button class="seg" data-value="4">4×</button>
-            <button class="seg" data-value="6">6×</button>
-            <button class="seg" data-value="8">8×</button>
+            <button class="seg" data-value="0" title="Draws at the size of the game window">Auto<small>window size</small></button>
+            <button class="seg" data-value="1" title="The Wii's own picture size">Native<small>480p</small></button>
+            <button class="seg" data-value="1.5">1.5×<small>720p</small></button>
+            <button class="seg" data-value="2">2×<small>960p</small></button>
+            <button class="seg" data-value="3">3×<small>1440p</small></button>
+            <button class="seg" data-value="4">4×<small>1920p</small></button>
+            <button class="seg" data-value="6">6×<small>2880p</small></button>
+            <button class="seg" data-value="8">8×<small>3840p</small></button>
           </div>
         </div>
+        <p class="muted small" id="resolution-note"></p>
         <label class="switch"><input type="checkbox" id="native-effects"><span>Effects at native resolution <span class="muted">· softer glow and blur, much easier on weaker graphics cards</span></span></label>
         <label class="switch"><input type="checkbox" id="show-fps"><span>Show frame rate <span class="muted">· the small counter in the corner of the game</span></span></label>
         <div class="setting">
@@ -190,6 +191,7 @@
 
       <div class="card">
         <h2>Archipelago</h2>
+        <p class="muted small">Optional. <a href="#" data-url="https://archipelago.gg">Archipelago</a> is a free multiworld randomizer: a group of players each play their own randomized game (this one's Punch-Out!!), and items get shuffled between everyone's games. You only need this if you are joining one. Leave it off to play normally.</p>
         <label class="ap-toggle" id="ap-toggle-label">
           <input type="checkbox" id="ap-enabled">
           <img src="assets/archipelago.png" alt="" class="ap-logo" id="ap-logo">

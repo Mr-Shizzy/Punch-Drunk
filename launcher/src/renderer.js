@@ -178,6 +178,17 @@ function renderArchipelago(s) {
   $('ap-patch-file').textContent = ap.patchFile || 'None';
 }
 
+// What the chosen resolution means in pixels. The Wii draws 480 lines (640 wide at 4:3, 854 at 16:9); each step
+// multiplies that, and the label names the height.
+function resolutionNote(g) {
+  const tip = ' A 1080p screen looks sharpest at 3×, a 4K screen at 4× or more. Higher costs more graphics power.';
+  if (!g.resolution) return "Auto draws the game at the size of its window. That is the sharpest choice for any window size, but the heaviest for a big one.";
+  const height = Math.round(480 * g.resolution);
+  const width = Math.ceil(g.widescreen ? height * 16 / 9 : height * 4 / 3);
+  const name = g.resolution === 1 ? "Native is the Wii's own picture size, " : '';
+  return `${name}${width} × ${height} pixels.${g.resolution === 1 ? '' : ' (The Wii draws 480 lines.)'}${tip}`;
+}
+
 function renderSettings(s) {
   const set = s.settings;
   const locked = Boolean(set.archipelago.enabled);
@@ -195,9 +206,10 @@ function renderSettings(s) {
   $('force-aspect').checked = g.forceAspect;
   $('native-effects').checked = g.nativeEffects;
   $('show-fps').checked = g.showFps;
+  $('resolution-note').textContent = resolutionNote(g);
   $('graphics-note').textContent = s.running
     ? 'The game is running, so changes here apply the next time it starts. To change them now, press F10 in the game.'
-    : "Auto renders at the window's size. Native is the Wii's resolution; higher multiples look sharper but need a stronger graphics card. Aspect ratio changes apply the next time the game starts.";
+    : 'Aspect ratio changes apply the next time the game starts.';
   $('data-root').textContent = s.dataRoot;
   $('port-source').textContent = s.portSource || 'Not found';
   $('rebuild').disabled = s.busy || s.running || !s.games[s.game].haveCopy;
