@@ -197,6 +197,17 @@
       </div>
 
       <div class="card">
+        <h2>Texture mods <span class="muted">· experimental</span></h2>
+        <label class="switch"><input type="checkbox" id="texture-mods"><span>Use my replacement textures <span class="muted">· picks up pictures from the texture folder when the game starts</span></span></label>
+        <label class="switch"><input type="checkbox" id="texture-names"><span>Save the name of every texture the game uses <span class="muted">· shows what each picture file would have to be called</span></span></label>
+        <div class="row wrap">
+          <button class="secondary" id="open-textures">Open texture folder</button>
+          <button class="secondary" id="open-texture-names">Open saved names</button>
+        </div>
+        <p class="muted small">Each game has its own folders. These buttons open the ones for the selected game. Both switches apply to both games and take effect the next time a game starts.</p>
+      </div>
+
+      <div class="card">
         <h2>Archipelago</h2>
         <p class="muted small">Optional. <a href="#" data-url="https://archipelago.gg">Archipelago</a> is a free multiworld randomizer: a group of players each play their own randomized game (this one's Punch-Out!!), and items get shuffled between everyone's games. You only need this if you are joining one. Leave it off to play normally.</p>
         <label class="ap-toggle" id="ap-toggle-label">

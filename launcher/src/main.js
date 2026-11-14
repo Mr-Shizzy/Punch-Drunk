@@ -822,6 +822,8 @@ function readGameSettings() {
       nativeEffects: get('video', 'native_effect_copies', false) === true,
       showFps: get('video', 'show_fps', false) === true,
       smoothEdges: Number(get('video', 'msaa', 1)) === 4, // anti-aliasing: msaa 4 = on, 1 = off
+      textureMods: get('video', 'texture_replacements', false) === true, // experimental
+      textureNames: get('video', 'texture_dumps', false) === true, // experimental
       resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
       displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
     },
@@ -868,6 +870,8 @@ function writeGameSettings(s) {
     if (typeof g.nativeEffects === 'boolean') text = toml.set(text, 'video', 'native_effect_copies', g.nativeEffects);
     if (typeof g.showFps === 'boolean') text = toml.set(text, 'video', 'show_fps', g.showFps);
     if (typeof g.smoothEdges === 'boolean') text = toml.set(text, 'video', 'msaa', g.smoothEdges ? 4 : 1);
+    if (typeof g.textureMods === 'boolean') text = toml.set(text, 'video', 'texture_replacements', g.textureMods);
+    if (typeof g.textureNames === 'boolean') text = toml.set(text, 'video', 'texture_dumps', g.textureNames);
     if (GRAPHICS_RESOLUTIONS.includes(g.resolution)) text = toml.set(text, 'video', 'resolution_multiplier', g.resolution);
     if (GRAPHICS_DISPLAY_MODES.includes(g.displayMode)) text = toml.set(text, 'video', 'display_mode', g.displayMode);
   }
@@ -1074,7 +1078,12 @@ function registerHandlers() {
   ipcMain.handle('open-folder', (_e, which) => {
     const p = paths();
     const g = gamePaths();
-    const dir = { logs: g.logs, port: g.port, data: p.root }[which] || p.root;
+    // The game looks for these two next to its Config.toml (see runtime_config.h), one set per game.
+    const dir = {
+      logs: g.logs, port: g.port, data: p.root,
+      textures: path.join(g.port, 'UserData', 'texture_replacements'),
+      texturenames: path.join(g.port, 'UserData', 'Cache', 'texture_dumps')
+    }[which] || p.root;
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
   });
