@@ -144,6 +144,12 @@ function png(width, height, rgba) {
 // A plain 32-bit DDS picture (what the game's texture dump writes) as a PNG; the first image only. Returns null for
 // any other kind of DDS.
 function ddsToPng(dds) {
+  const r = ddsToPngInfo(dds);
+  return r ? r.png : null;
+}
+
+// Same, and also says whether the picture has no colour at all (every pixel's red, green and blue equal).
+function ddsToPngInfo(dds) {
   if (dds.length < 128 || dds.toString('latin1', 0, 4) !== 'DDS ') return null;
   const height = dds.readUInt32LE(12), width = dds.readUInt32LE(16);
   const pfFlags = dds.readUInt32LE(80), bits = dds.readUInt32LE(88);
@@ -152,11 +158,13 @@ function ddsToPng(dds) {
   const masks = [dds.readUInt32LE(92), dds.readUInt32LE(96), dds.readUInt32LE(100), (pfFlags & 1) ? dds.readUInt32LE(104) : 0];
   const shifts = masks.map(m => (m === 0 ? -1 : Math.log2(m & -m)));
   const rgba = Buffer.alloc(width * height * 4);
+  let gray = true;
   for (let i = 0; i < width * height; i++) {
     const v = dds.readUInt32LE(128 + i * 4);
     for (let c = 0; c < 4; c++) rgba[i * 4 + c] = shifts[c] < 0 ? 255 : (v >>> shifts[c]) & 255;
+    if (gray && (rgba[i * 4] !== rgba[i * 4 + 1] || rgba[i * 4] !== rgba[i * 4 + 2])) gray = false;
   }
-  return png(width, height, rgba);
+  return { png: png(width, height, rgba), gray, width, height };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -265,4 +273,4 @@ function buildArt({ filesDir, docBanner, outDir }) {
   return { made, problems };
 }
 
-module.exports = { buildArt, ddsToPng, thpFrame, unstuffJpeg, bannerFiles, tplRgba, png, lz77, u8Files, NAMES, BACKGROUNDS };
+module.exports = { buildArt, ddsToPng, ddsToPngInfo, thpFrame, unstuffJpeg, bannerFiles, tplRgba, png, lz77, u8Files, NAMES, BACKGROUNDS };

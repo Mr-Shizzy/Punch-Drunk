@@ -1095,20 +1095,27 @@ function registerHandlers() {
     let names = [];
     try { names = fs.readdirSync(from).filter(n => n.toLowerCase().endsWith('.dds')); } catch { /* no dump yet */ }
     if (names.length === 0) return { made: 0, total: 0 };
-    fs.mkdirSync(to, { recursive: true });
-    let made = 0;
+    // Pictures with colour go in "color"; the grey ones (masks and shading the game colours itself) in "grayscale".
+    const colorDir = path.join(to, 'color'), grayDir = path.join(to, 'grayscale');
+    fs.mkdirSync(colorDir, { recursive: true });
+    fs.mkdirSync(grayDir, { recursive: true });
+    let made = 0, color = 0;
     for (const [i, name] of names.entries()) {
-      const target = path.join(to, name.replace(/\.dds$/i, '.png'));
-      if (!fs.existsSync(target)) {
-        try {
-          const data = art.ddsToPng(fs.readFileSync(path.join(from, name)));
-          if (data) { fs.writeFileSync(target, data); made++; }
-        } catch (err) { log(`[textures] ${name}: ${err.message}`); }
-      }
+      const png = name.replace(/\.dds$/i, '.png');
+      try {
+        const info = art.ddsToPngInfo(fs.readFileSync(path.join(from, name)));
+        if (info) {
+          const dir = info.gray ? grayDir : colorDir;
+          if (!info.gray) color++;
+          const target = path.join(dir, png), old = path.join(to, png); // old: from the first version, loose in "to"
+          if (fs.existsSync(old) && !fs.existsSync(target)) fs.renameSync(old, target); // keeps anything already edited
+          else if (!fs.existsSync(target)) { fs.writeFileSync(target, info.png); made++; }
+        }
+      } catch (err) { log(`[textures] ${name}: ${err.message}`); }
       if (i % 50 === 49) await new Promise(r => setImmediate(r)); // keep the window responsive
     }
     shell.openPath(to);
-    return { made, total: names.length };
+    return { made, total: names.length, color };
   });
   ipcMain.handle('open-external', (_e, url) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);

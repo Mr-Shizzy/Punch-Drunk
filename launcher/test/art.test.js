@@ -132,6 +132,9 @@ test('a 32-bit DDS texture dump becomes a PNG with the same pixels', () => {
   const pixels = Buffer.from([10, 20, 30, 255, 40, 50, 60, 128, 70, 80, 90, 0, 1, 2, 3, 4]);
   const out = art.ddsToPng(Buffer.concat([head, pixels]));
   assert.deepStrictEqual([...firstRow(out, 2)], [10, 20, 30, 255, 40, 50, 60, 128]);
+  assert.strictEqual(art.ddsToPngInfo(Buffer.concat([head, pixels])).gray, false);
+  const greys = Buffer.from([5, 5, 5, 255, 9, 9, 9, 0, 70, 70, 70, 1, 1, 1, 1, 4]);
+  assert.strictEqual(art.ddsToPngInfo(Buffer.concat([head, greys])).gray, true);
   // compressed or damaged pictures are left alone
   head.writeUInt32LE(0x4, 80); head.write('DXT1', 84, 'latin1');
   assert.strictEqual(art.ddsToPng(Buffer.concat([head, pixels])), null);
