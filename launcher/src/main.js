@@ -793,6 +793,11 @@ function ensureGameConfig() {
   text = toml.set(text, 'paths', 'dvd_root', p.disc);
   // The frame-rate counter is off unless the player turns it on (the game itself defaults to on).
   if (toml.get(text, 'video', 'show_fps') === undefined) text = toml.set(text, 'video', 'show_fps', false);
+  // The texture dump/replacement test builds are gone, but their switches can still be on in a config they wrote, and
+  // saving every texture makes the game crawl. Turn them off.
+  for (const key of ['texture_dumps', 'texture_replacements']) {
+    if (toml.get(text, 'video', key) === true) text = toml.set(text, 'video', key, false);
+  }
   // Keep the picture's shape on wide windows (black bars) rather than stretching it. Only when never chosen.
   if (toml.get(text, 'video', 'force_aspect') === undefined) text = toml.set(text, 'video', 'force_aspect', true);
   fs.writeFileSync(p.gameConfig, text);
