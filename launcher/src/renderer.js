@@ -207,8 +207,6 @@ function renderSettings(s) {
   $('native-effects').checked = g.nativeEffects;
   $('show-fps').checked = g.showFps;
   setSegmented('antialiasing', g.smoothEdges ? '4' : '1');
-  $('texture-mods').checked = g.textureMods;
-  $('texture-names').checked = g.textureNames;
   $('resolution-note').textContent = resolutionNote(g);
   $('graphics-note').textContent = s.running
     ? 'The game is running, so changes here apply the next time it starts. To change them now, press F10 in the game.'
@@ -495,10 +493,6 @@ $('rebuild').addEventListener('click', () => guarded(async () => { showPage('hom
 $('stop').addEventListener('click', () => api.stop());
 $('open-port').addEventListener('click', () => api.openFolder('port'));
 $('open-logs').addEventListener('click', () => api.openFolder('logs'));
-$('open-textures').addEventListener('click', () => api.openFolder('textures'));
-$('open-texture-names').addEventListener('click', () => api.openFolder('texturenames'));
-$('texture-mods').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { textureMods: $('texture-mods').checked } })));
-$('texture-names').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { textureNames: $('texture-names').checked } })));
 $('choose-data-root').addEventListener('click', () => guarded(() => api.chooseFolder('dataRoot')));
 $('choose-port-source').addEventListener('click', () => guarded(() => api.chooseFolder('portSource')));
 for (const a of document.querySelectorAll('a[data-url]')) {

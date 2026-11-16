@@ -16,7 +16,6 @@ const os = require('node:os');
 const path = require('node:path');
 const toml = require('./toml-edit');
 const art = require('./art');
-const textures = require('./textures');
 const { pathToFileURL } = require('node:url');
 const wad = require('./wad');
 
@@ -760,8 +759,6 @@ async function play() {
   const out = fs.createWriteStream(logFile);
   setTask({ label: `Playing ${GAMES[game].name}`, detail: 'Close the game to come back here', percent: null });
   const watcher = setInterval(() => send('state-changed'), 2000); // the Archipelago checkmark follows the game
-  const savePictures = readGameSettings().graphics.textureNames;
-  if (savePictures) textures.clearGamePictures(p.port); // so the folder holds only this session's pictures
   try {
     await spawnLogged(state.binary, [], { cwd: p.port, windowsHide: false }, line => out.write(line + '\n'));
   } finally {
@@ -770,12 +767,7 @@ async function play() {
     gameRunning = false;
     send('state-changed');
   }
-  if (savePictures) {
-    setTask({ label: "Saving the game's pictures", detail: 'A few seconds', percent: null });
-    await textures.makeGamePictures(p.port, log);
-  }
 }
-
 
 // The values WiiCompiled accepts (IsSupportedResolutionMultiplier / IsSupportedDisplayMode).
 const GRAPHICS_RESOLUTIONS = [0, 1, 1.5, 2, 3, 4, 6, 8];
@@ -830,8 +822,6 @@ function readGameSettings() {
       nativeEffects: get('video', 'native_effect_copies', false) === true,
       showFps: get('video', 'show_fps', false) === true,
       smoothEdges: Number(get('video', 'msaa', 1)) === 4, // anti-aliasing: msaa 4 = on, 1 = off
-      textureMods: get('video', 'texture_replacements', false) === true, // experimental
-      textureNames: get('video', 'texture_dumps', false) === true, // experimental
       resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
       displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
     },
@@ -878,8 +868,6 @@ function writeGameSettings(s) {
     if (typeof g.nativeEffects === 'boolean') text = toml.set(text, 'video', 'native_effect_copies', g.nativeEffects);
     if (typeof g.showFps === 'boolean') text = toml.set(text, 'video', 'show_fps', g.showFps);
     if (typeof g.smoothEdges === 'boolean') text = toml.set(text, 'video', 'msaa', g.smoothEdges ? 4 : 1);
-    if (typeof g.textureMods === 'boolean') text = toml.set(text, 'video', 'texture_replacements', g.textureMods);
-    if (typeof g.textureNames === 'boolean') text = toml.set(text, 'video', 'texture_dumps', g.textureNames);
     if (GRAPHICS_RESOLUTIONS.includes(g.resolution)) text = toml.set(text, 'video', 'resolution_multiplier', g.resolution);
     if (GRAPHICS_DISPLAY_MODES.includes(g.displayMode)) text = toml.set(text, 'video', 'display_mode', g.displayMode);
   }
@@ -1086,12 +1074,7 @@ function registerHandlers() {
   ipcMain.handle('open-folder', (_e, which) => {
     const p = paths();
     const g = gamePaths();
-    // The game looks for these two next to its Config.toml (see runtime_config.h), one set per game.
-    const dir = {
-      logs: g.logs, port: g.port, data: p.root,
-      textures: textures.texturePaths(g.port).mine,
-      texturenames: textures.texturePaths(g.port).pictures
-    }[which] || p.root;
+    const dir = { logs: g.logs, port: g.port, data: p.root }[which] || p.root;
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
   });
