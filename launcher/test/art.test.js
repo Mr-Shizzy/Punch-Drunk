@@ -123,6 +123,21 @@ test('THP frames: the missing 00 after FF is put back, and frames are found by n
   assert.strictEqual(art.thpFrame(file, 2), null);
 });
 
+test('a 32-bit DDS texture dump becomes a PNG with the same pixels', () => {
+  const head = Buffer.alloc(128);
+  head.write('DDS ', 0, 'latin1'); head.writeUInt32LE(124, 4);
+  head.writeUInt32LE(2, 12); head.writeUInt32LE(2, 16); // 2 x 2
+  head.writeUInt32LE(32, 76); head.writeUInt32LE(0x41, 80); head.writeUInt32LE(32, 88);
+  head.writeUInt32LE(0xFF, 92); head.writeUInt32LE(0xFF00, 96); head.writeUInt32LE(0xFF0000, 100); head.writeUInt32LE(0xFF000000, 104);
+  const pixels = Buffer.from([10, 20, 30, 255, 40, 50, 60, 128, 70, 80, 90, 0, 1, 2, 3, 4]);
+  const out = art.ddsToPng(Buffer.concat([head, pixels]));
+  assert.deepStrictEqual([...firstRow(out, 2)], [10, 20, 30, 255, 40, 50, 60, 128]);
+  // compressed or damaged pictures are left alone
+  head.writeUInt32LE(0x4, 80); head.write('DXT1', 84, 'latin1');
+  assert.strictEqual(art.ddsToPng(Buffer.concat([head, pixels])), null);
+  assert.strictEqual(art.ddsToPng(Buffer.alloc(10)), null);
+});
+
 test('a missing or damaged source is skipped, and the rest is still made', () => {
   const dir = tmpDir();
   fs.writeFileSync(path.join(dir, 'opening.bnr'), Buffer.alloc(100));

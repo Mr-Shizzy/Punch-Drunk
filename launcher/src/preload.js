@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('launcher', {
   stop: () => ipcRenderer.invoke('stop'),
   saveSettings: settings => ipcRenderer.invoke('save-settings', settings),
   openFolder: which => ipcRenderer.invoke('open-folder', which),
+  makeTexturePngs: () => ipcRenderer.invoke('make-texture-pngs'),
   openExternal: url => ipcRenderer.invoke('open-external', url),
   copyLog: () => ipcRenderer.invoke('copy-log'),
   copyText: text => ipcRenderer.invoke('copy-text', text),

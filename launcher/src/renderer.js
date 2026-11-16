@@ -497,6 +497,11 @@ $('open-port').addEventListener('click', () => api.openFolder('port'));
 $('open-logs').addEventListener('click', () => api.openFolder('logs'));
 $('open-textures').addEventListener('click', () => api.openFolder('textures'));
 $('open-texture-names').addEventListener('click', () => api.openFolder('texturenames'));
+$('texture-pngs').addEventListener('click', () => guarded(async () => {
+  setStatus('Making PNG copies…');
+  const r = await api.makeTexturePngs();
+  setStatus(r.total === 0 ? 'No saved textures yet: turn on "Save the name of every texture", play, then try again' : `PNG copies ready (${r.made} new, ${r.total} in all)`);
+}));
 $('texture-mods').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { textureMods: $('texture-mods').checked } })));
 $('texture-names').addEventListener('change', () => guarded(() => api.saveSettings({ graphics: { textureNames: $('texture-names').checked } })));
 $('choose-data-root').addEventListener('click', () => guarded(() => api.chooseFolder('dataRoot')));

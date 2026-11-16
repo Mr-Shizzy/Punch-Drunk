@@ -141,6 +141,24 @@ function png(width, height, rgba) {
     chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
+// A plain 32-bit DDS picture (what the game's texture dump writes) as a PNG; the first image only. Returns null for
+// any other kind of DDS.
+function ddsToPng(dds) {
+  if (dds.length < 128 || dds.toString('latin1', 0, 4) !== 'DDS ') return null;
+  const height = dds.readUInt32LE(12), width = dds.readUInt32LE(16);
+  const pfFlags = dds.readUInt32LE(80), bits = dds.readUInt32LE(88);
+  if ((pfFlags & 4) || bits !== 32 || !(pfFlags & 0x40)) return null; // not an uncompressed colour picture
+  if (width === 0 || height === 0 || dds.length < 128 + width * height * 4) return null;
+  const masks = [dds.readUInt32LE(92), dds.readUInt32LE(96), dds.readUInt32LE(100), (pfFlags & 1) ? dds.readUInt32LE(104) : 0];
+  const shifts = masks.map(m => (m === 0 ? -1 : Math.log2(m & -m)));
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const v = dds.readUInt32LE(128 + i * 4);
+    for (let c = 0; c < 4; c++) rgba[i * 4 + c] = shifts[c] < 0 ? 255 : (v >>> shifts[c]) & 255;
+  }
+  return png(width, height, rgba);
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // THP video frames
 
@@ -247,4 +265,4 @@ function buildArt({ filesDir, docBanner, outDir }) {
   return { made, problems };
 }
 
-module.exports = { buildArt, thpFrame, unstuffJpeg, bannerFiles, tplRgba, png, lz77, u8Files, NAMES, BACKGROUNDS };
+module.exports = { buildArt, ddsToPng, thpFrame, unstuffJpeg, bannerFiles, tplRgba, png, lz77, u8Files, NAMES, BACKGROUNDS };

@@ -1087,6 +1087,29 @@ function registerHandlers() {
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
   });
+  // Texture mods (experimental): the game's dump is .dds, which few editors open. The game also takes .png
+  // replacements with the same name, so this writes PNG copies of the dump beside it and opens that folder.
+  ipcMain.handle('make-texture-pngs', async () => {
+    const from = path.join(gamePaths().port, 'UserData', 'Cache', 'texture_dumps');
+    const to = path.join(gamePaths().port, 'UserData', 'Cache', 'texture_png');
+    let names = [];
+    try { names = fs.readdirSync(from).filter(n => n.toLowerCase().endsWith('.dds')); } catch { /* no dump yet */ }
+    if (names.length === 0) return { made: 0, total: 0 };
+    fs.mkdirSync(to, { recursive: true });
+    let made = 0;
+    for (const [i, name] of names.entries()) {
+      const target = path.join(to, name.replace(/\.dds$/i, '.png'));
+      if (!fs.existsSync(target)) {
+        try {
+          const data = art.ddsToPng(fs.readFileSync(path.join(from, name)));
+          if (data) { fs.writeFileSync(target, data); made++; }
+        } catch (err) { log(`[textures] ${name}: ${err.message}`); }
+      }
+      if (i % 50 === 49) await new Promise(r => setImmediate(r)); // keep the window responsive
+    }
+    shell.openPath(to);
+    return { made, total: names.length };
+  });
   ipcMain.handle('open-external', (_e, url) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
   });
