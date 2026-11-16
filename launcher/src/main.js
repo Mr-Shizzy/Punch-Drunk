@@ -16,6 +16,7 @@ const os = require('node:os');
 const path = require('node:path');
 const toml = require('./toml-edit');
 const art = require('./art');
+const textures = require('./textures');
 const { pathToFileURL } = require('node:url');
 const wad = require('./wad');
 
@@ -759,6 +760,8 @@ async function play() {
   const out = fs.createWriteStream(logFile);
   setTask({ label: `Playing ${GAMES[game].name}`, detail: 'Close the game to come back here', percent: null });
   const watcher = setInterval(() => send('state-changed'), 2000); // the Archipelago checkmark follows the game
+  const savePictures = readGameSettings().graphics.textureNames;
+  if (savePictures) textures.clearGamePictures(p.port); // so the folder holds only this session's pictures
   try {
     await spawnLogged(state.binary, [], { cwd: p.port, windowsHide: false }, line => out.write(line + '\n'));
   } finally {
@@ -767,7 +770,12 @@ async function play() {
     gameRunning = false;
     send('state-changed');
   }
+  if (savePictures) {
+    setTask({ label: "Saving the game's pictures", detail: 'A few seconds', percent: null });
+    await textures.makeGamePictures(p.port, log);
+  }
 }
+
 
 // The values WiiCompiled accepts (IsSupportedResolutionMultiplier / IsSupportedDisplayMode).
 const GRAPHICS_RESOLUTIONS = [0, 1, 1.5, 2, 3, 4, 6, 8];
@@ -1081,41 +1089,11 @@ function registerHandlers() {
     // The game looks for these two next to its Config.toml (see runtime_config.h), one set per game.
     const dir = {
       logs: g.logs, port: g.port, data: p.root,
-      textures: path.join(g.port, 'UserData', 'texture_replacements'),
-      texturenames: path.join(g.port, 'UserData', 'Cache', 'texture_dumps')
+      textures: textures.texturePaths(g.port).mine,
+      texturenames: textures.texturePaths(g.port).pictures
     }[which] || p.root;
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
-  });
-  // Texture mods (experimental): the game's dump is .dds, which few editors open. The game also takes .png
-  // replacements with the same name, so this writes PNG copies of the dump beside it and opens that folder.
-  ipcMain.handle('make-texture-pngs', async () => {
-    const from = path.join(gamePaths().port, 'UserData', 'Cache', 'texture_dumps');
-    const to = path.join(gamePaths().port, 'UserData', 'Cache', 'texture_png');
-    let names = [];
-    try { names = fs.readdirSync(from).filter(n => n.toLowerCase().endsWith('.dds')); } catch { /* no dump yet */ }
-    if (names.length === 0) return { made: 0, total: 0 };
-    // Pictures with colour go in "color"; the grey ones (masks and shading the game colours itself) in "grayscale".
-    const colorDir = path.join(to, 'color'), grayDir = path.join(to, 'grayscale');
-    fs.mkdirSync(colorDir, { recursive: true });
-    fs.mkdirSync(grayDir, { recursive: true });
-    let made = 0, color = 0;
-    for (const [i, name] of names.entries()) {
-      const png = name.replace(/\.dds$/i, '.png');
-      try {
-        const info = art.ddsToPngInfo(fs.readFileSync(path.join(from, name)));
-        if (info) {
-          const dir = info.gray ? grayDir : colorDir;
-          if (!info.gray) color++;
-          const target = path.join(dir, png), old = path.join(to, png); // old: from the first version, loose in "to"
-          if (fs.existsSync(old) && !fs.existsSync(target)) fs.renameSync(old, target); // keeps anything already edited
-          else if (!fs.existsSync(target)) { fs.writeFileSync(target, info.png); made++; }
-        }
-      } catch (err) { log(`[textures] ${name}: ${err.message}`); }
-      if (i % 50 === 49) await new Promise(r => setImmediate(r)); // keep the window responsive
-    }
-    shell.openPath(to);
-    return { made, total: names.length, color };
   });
   ipcMain.handle('open-external', (_e, url) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);

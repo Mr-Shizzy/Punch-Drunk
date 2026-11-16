@@ -198,15 +198,13 @@
 
       <div class="card">
         <h2>Texture mods <span class="muted">· experimental</span></h2>
-        <label class="switch"><input type="checkbox" id="texture-mods"><span>Use my replacement textures <span class="muted">· picks up pictures from the texture folder when the game starts</span></span></label>
-        <label class="switch"><input type="checkbox" id="texture-names"><span>Save the name of every texture the game uses <span class="muted">· shows what each picture file would have to be called</span></span></label>
+        <label class="switch"><input type="checkbox" id="texture-names"><span>Save the game's pictures while I play <span class="muted">· as PNG files, replaced each time you start a game</span></span></label>
+        <label class="switch"><input type="checkbox" id="texture-mods"><span>Use my own pictures <span class="muted">· any picture in "My textures" replaces the game's</span></span></label>
         <div class="row wrap">
-          <button class="secondary" id="open-textures">Open texture folder</button>
-          <button class="secondary" id="open-texture-names">Open saved names</button>
-          <button class="secondary" id="texture-pngs">Make PNG copies</button>
+          <button class="secondary" id="open-texture-names">Open game pictures</button>
+          <button class="secondary" id="open-textures">Open my textures</button>
         </div>
-        <p class="muted small">The saved names are .dds files, which most picture editors can't open. "Make PNG copies" writes ordinary PNG versions next to them. The "color" folder has the pictures with real colour, the usual ones to edit. The "grayscale" folder has grey masks and shading that the game colours itself. Edit a PNG, then put it in the texture folder with the same name.</p>
-        <p class="muted small">Each game has its own folders. These buttons open the ones for the selected game. Both switches apply to both games and take effect the next time a game starts.</p>
+        <p class="muted small">To change a picture: copy it from "game pictures" into "my textures", edit it, and keep the same file name. Changes show up the next time you start the game.</p>
       </div>
 
       <div class="card">
