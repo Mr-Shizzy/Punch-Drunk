@@ -22883,7 +22883,7 @@ index 0000000..1c71f1d
 +    return on;
 +}
 diff --git a/runtime/include/runtime_config.h b/runtime/include/runtime_config.h
-index ea5a12b..3f40b3f 100644
+index ea5a12b..baedb48 100644
 --- a/runtime/include/runtime_config.h
 +++ b/runtime/include/runtime_config.h
 @@ -4,6 +4,7 @@
@@ -22894,7 +22894,7 @@ index ea5a12b..3f40b3f 100644
  #include <cstddef>
  #include <cstdint>
  #include <filesystem>
-@@ -48,9 +49,11 @@ struct RuntimeUserConfig {
+@@ -48,9 +49,14 @@ struct RuntimeUserConfig {
      std::optional<bool> vsync;
      std::optional<bool> gxWorker;
      std::optional<bool> disableCopyFilter;
@@ -22903,10 +22903,13 @@ index ea5a12b..3f40b3f 100644
      std::optional<bool> textureDumps;
      std::optional<bool> showFps;
 +    std::optional<uint32_t> msaa;
++    // [cheats] (Punch-Out!!, off when Archipelago is on): see punchout_ap_game.cpp
++    std::optional<bool> cheatInvincible;
++    std::optional<bool> cheatUnlimitedStars;
      std::optional<uint32_t> disabledPostProcessingPaths;
      std::optional<float> audioVolume;
      std::optional<float> audioMusicVolume;
-@@ -82,6 +85,8 @@ struct RuntimeUserConfig {
+@@ -82,6 +88,8 @@ struct RuntimeUserConfig {
      std::optional<std::string> discordClientId;
      std::optional<std::string> nandRoot;
      std::optional<std::string> dvdRoot;
@@ -22915,7 +22918,7 @@ index ea5a12b..3f40b3f 100644
      // The one canonical Retro Rewind installation, owned and updated by the frontend. Setup records
      // it here instead of copying the pack, so an asset-only update is visible on the next launch.
      std::optional<std::string> retroRewindRoot;
-@@ -93,6 +98,20 @@ struct RuntimeUserConfig {
+@@ -93,6 +101,20 @@ struct RuntimeUserConfig {
      std::optional<bool> rumbleEnabled;
      // Shake a motion controller to press the D-pad, like shaking a Wii Remote.
      std::optional<bool> motionTrick;
@@ -22936,7 +22939,7 @@ index ea5a12b..3f40b3f 100644
      std::optional<int32_t> motionTrickSensitivity;
      std::optional<int32_t> muteHotkey;
      std::map<std::string, std::string> controllerExpressions;
-@@ -271,7 +290,7 @@ inline void EnsureConfigFile() {
+@@ -271,7 +293,7 @@ inline void EnsureConfigFile() {
          return;
      }
  
@@ -22945,7 +22948,7 @@ index ea5a12b..3f40b3f 100644
      if (!output) {
          return;
      }
-@@ -387,6 +406,15 @@ inline void AppendOverlayRoots(RuntimeUserConfig& config, const std::string& roo
+@@ -387,6 +409,15 @@ inline void AppendOverlayRoots(RuntimeUserConfig& config, const std::string& roo
      }
  }
  
@@ -22961,7 +22964,7 @@ index ea5a12b..3f40b3f 100644
  // Reads every supported setting out of a parsed Config.toml document.
  inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
      RuntimeUserConfig config;
-@@ -401,6 +429,23 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -401,6 +432,23 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
  
      config.rumbleEnabled = FindConfigValue<bool>(document, "controller", "rumble");
      config.motionTrick = FindConfigValue<bool>(document, "controller", "motion_trick");
@@ -22985,12 +22988,14 @@ index ea5a12b..3f40b3f 100644
      if (const auto value = FindConfigInt(document, "controller", "motion_trick_sensitivity"); value && *value >= 1 && *value <= 5) {
          config.motionTrickSensitivity = *value;
      }
-@@ -463,7 +508,12 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -463,7 +511,14 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
      config.vsync = FindConfigValue<bool>(document, "video", "vsync");
      config.gxWorker = FindConfigValue<bool>(document, "video", "gx_worker");
      config.disableCopyFilter = FindConfigValue<bool>(document, "video", "disable_copy_filter");
 +    config.nativeEffectCopies = FindConfigValue<bool>(document, "video", "native_effect_copies");
      config.showFps = FindConfigValue<bool>(document, "video", "show_fps");
++    config.cheatInvincible = FindConfigValue<bool>(document, "cheats", "invincible");
++    config.cheatUnlimitedStars = FindConfigValue<bool>(document, "cheats", "unlimited_stars");
 +    // Edge smoothing: 1 (off) or 4 samples. (WebGPU only guarantees those two.)
 +    if (auto value = FindConfigUint(document, "video", "msaa"); value && (*value == 1 || *value == 4)) {
 +        config.msaa = *value;
@@ -22998,7 +23003,7 @@ index ea5a12b..3f40b3f 100644
      config.textureReplacements = FindConfigValue<bool>(document, "video", "texture_replacements");
      config.textureDumps = FindConfigValue<bool>(document, "video", "texture_dumps");
      if (auto value = FindConfigUint(document, "video", "disabled_post_processing_paths");
-@@ -506,6 +556,7 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -506,6 +561,7 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
  
      config.nandRoot = FindConfigValue<std::string>(document, "paths", "nand_root");
      config.dvdRoot = FindConfigValue<std::string>(document, "paths", "dvd_root");
@@ -23006,7 +23011,7 @@ index ea5a12b..3f40b3f 100644
      config.retroRewindRoot = FindConfigValue<std::string>(document, "paths", "retro_rewind_root");
      if (auto roots = FindConfigValue<std::vector<std::string>>(document, "paths", "overlay_roots")) {
          for (auto& root : *roots) {
-@@ -531,10 +582,112 @@ inline RuntimeUserConfig ParseConfig(std::istream& input, std::string sourceName
+@@ -531,10 +587,112 @@ inline RuntimeUserConfig ParseConfig(std::istream& input, std::string sourceName
      }
  }
  
@@ -23120,7 +23125,7 @@ index ea5a12b..3f40b3f 100644
  }
  
  inline const RuntimeUserConfig& Get() {
-@@ -589,8 +742,8 @@ inline std::optional<std::string> UpdateSettingText(const std::string& text, std
+@@ -589,8 +747,8 @@ inline std::optional<std::string> UpdateSettingText(const std::string& text, std
  
  // Update one TOML value without discarding unrelated settings or user-specific paths. This is
  // used by the in-game F10 settings bar. An unparseable file is left untouched.
@@ -23131,7 +23136,7 @@ index ea5a12b..3f40b3f 100644
      std::ostringstream existing;
      if (std::ifstream input(path, std::ios::binary); input) {
          existing << input.rdbuf();
-@@ -605,7 +758,9 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
+@@ -605,7 +763,9 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
      if (path.has_parent_path()) {
          std::filesystem::create_directories(path.parent_path(), ec);
      }
@@ -23142,7 +23147,7 @@ index ea5a12b..3f40b3f 100644
      if (!output) {
          std::cerr << "[runtime-config] Unable to write " << PathToUtf8(path) << std::endl;
          return false;
-@@ -614,6 +769,15 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
+@@ -614,6 +774,15 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
      return static_cast<bool>(output);
  }
  
@@ -23158,7 +23163,7 @@ index ea5a12b..3f40b3f 100644
  inline std::string FormatString(std::string_view value) {
      return toml::format(toml::value(std::string(value)));
  }
-@@ -675,6 +839,11 @@ inline bool SetVsync(bool value) {
+@@ -675,6 +844,11 @@ inline bool SetVsync(bool value) {
      return WriteSetting("video", "vsync", value ? "true" : "false");
  }
  
@@ -23170,7 +23175,7 @@ index ea5a12b..3f40b3f 100644
  inline bool SetDisableCopyFilter(bool value) {
      Mutable().disableCopyFilter = value;
      return WriteSetting("video", "disable_copy_filter", value ? "true" : "false");
-@@ -719,6 +888,59 @@ inline bool SetRumbleEnabled(bool value) {
+@@ -719,6 +893,59 @@ inline bool SetRumbleEnabled(bool value) {
      return WriteSetting("controller", "rumble", value ? "true" : "false");
  }
  
@@ -23230,7 +23235,7 @@ index ea5a12b..3f40b3f 100644
  inline bool MotionTrickEnabled(bool fallback = false) {
      return Get().motionTrick.value_or(fallback);
  }
-@@ -746,6 +968,24 @@ inline bool SetMuteHotkey(int32_t value) {
+@@ -746,6 +973,24 @@ inline bool SetMuteHotkey(int32_t value) {
      return WriteSetting("audio", "mute_key", std::to_string(value));
  }
  
@@ -23255,7 +23260,7 @@ index ea5a12b..3f40b3f 100644
  inline bool SetAudioVolume(float value) {
      value = std::clamp(value, 0.0f, 1.0f);
      Mutable().audioVolume = value;
-@@ -975,10 +1215,18 @@ inline bool Vsync(bool fallback = false) {
+@@ -975,10 +1220,26 @@ inline bool Vsync(bool fallback = false) {
      return Get().vsync.value_or(fallback);
  }
  
@@ -23271,10 +23276,18 @@ index ea5a12b..3f40b3f 100644
 +    return Get().msaa.value_or(fallback);
 +}
 +
++inline bool CheatInvincible() {
++    return Get().cheatInvincible.value_or(false);
++}
++
++inline bool CheatUnlimitedStars() {
++    return Get().cheatUnlimitedStars.value_or(false);
++}
++
  inline bool ShowFps(bool fallback = true) {
      return Get().showFps.value_or(fallback);
  }
-@@ -1033,6 +1281,13 @@ inline std::filesystem::path ResolveRelativeToConfig(const std::string& value) {
+@@ -1033,6 +1294,13 @@ inline std::filesystem::path ResolveRelativeToConfig(const std::string& value) {
      return ResolveRelativeTo(ResolveConfigPath().parent_path(), value);
  }
  
@@ -28355,10 +28368,10 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..cabb954
+index 0000000..1af1839
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,627 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28380,6 +28393,7 @@ index 0000000..cabb954
 +#include "guest_abi/guest_region.h"
 +
 +#include "punchout_ap_game.h"
++#include "runtime_config.h"
 +#include "third_party/nlohmann/json.hpp"
 +
 +#include <algorithm>
@@ -28615,6 +28629,15 @@ index 0000000..cabb954
 +// down a second time by what this update took off.
 +extern "C" void PunchOut_FightUpdate_pseudo(CpuContext* ctx) {
 +    const uint32_t fight = ctx->gpr[3];
++    if (!GameActive() && Ptr(fight) && RuntimeConfigFile::CheatUnlimitedStars()) {
++        // Cheat "Unlimited stars" (Settings): Mac's star meter (his block + 0x10) is topped up to its limit (+0x0C).
++        const uint32_t mac = R32(fight + 4);
++        const uint32_t blk = Ptr(mac) ? R32(mac + 0xCC) : 0;
++        if (Ptr(blk)) {
++            const float limit = RF(blk + 0x0C);
++            if (limit > 0.01f && limit <= 3.01f && RF(blk + 0x10) < limit) WF(blk + 0x10, limit);
++        }
++    }
 +    if (!GameActive() || !Ptr(fight)) {
 +        MKW_GUEST_FUNC(80FF0048)(ctx);
 +        return;
@@ -28819,11 +28842,13 @@ index 0000000..cabb954
 +// ---- 7. Super Mac: a hit's reaction step (PO 80014DE4, r3 = the hit, defender at hit+0x28; pseudo PAL 80FF0064)
 +// returns 1 ("ignore this hit") for hits on Mac while Super Mac runs.
 +extern "C" void PunchOut_HitReaction_pseudo(CpuContext* ctx) {
-+    if (GameActive() && R32(kSuperMacFlag) != 0) {
++    // Cheat "Invincible Mac" (Settings): the same ignore, without an Archipelago session.
++    const bool cheat = !GameActive() && RuntimeConfigFile::CheatInvincible();
++    if ((GameActive() && R32(kSuperMacFlag) != 0) || cheat) {
 +        const uint32_t hit = ctx->gpr[3];
 +        const uint32_t mac = Mac();
 +        if (Ptr(hit) && mac != 0 && R32(hit + 0x28) == mac) {
-+            W32(kSuperMacIgnored, R32(kSuperMacIgnored) + 1);
++            if (!cheat) W32(kSuperMacIgnored, R32(kSuperMacIgnored) + 1);
 +            ctx->gpr[3] = 1;
 +            return;
 +        }

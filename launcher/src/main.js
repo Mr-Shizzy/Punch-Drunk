@@ -810,6 +810,10 @@ function readGameSettings() {
     buttonStyle: get('punchout', 'button_style', 'auto'),
     player1Controller: String(get('controller', 'player1', 'auto')),
     skipStrapScreen: get('punchout', 'skip_strap_screen', true),
+    cheats: {
+      invincible: get('cheats', 'invincible', false) === true,
+      unlimitedStars: get('cheats', 'unlimited_stars', false) === true
+    },
     controls: {
       lockMouse: get('punchout_controls', 'lock_mouse', false) === true,
       bindings: Object.fromEntries(Object.entries(CONTROL_DEFAULTS).map(([control, defaults]) =>
@@ -847,6 +851,10 @@ function writeGameSettings(s) {
     text = toml.set(text, 'controller', 'player1', s.player1Controller);
   }
   if (typeof s.skipStrapScreen === 'boolean') text = toml.set(text, 'punchout', 'skip_strap_screen', s.skipStrapScreen);
+  if (s.cheats) {
+    if (typeof s.cheats.invincible === 'boolean') text = toml.set(text, 'cheats', 'invincible', s.cheats.invincible);
+    if (typeof s.cheats.unlimitedStars === 'boolean') text = toml.set(text, 'cheats', 'unlimited_stars', s.cheats.unlimitedStars);
+  }
   const c = s.controls;
   if (c) {
     if (typeof c.lockMouse === 'boolean') text = toml.set(text, 'punchout_controls', 'lock_mouse', c.lockMouse);

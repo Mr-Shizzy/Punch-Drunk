@@ -199,6 +199,12 @@ function renderSettings(s) {
     input.disabled = locked;
   }
   $('skip-strap').checked = set.skipStrapScreen !== false;
+  $('cheat-invincible').checked = set.cheats.invincible;
+  $('cheat-stars').checked = set.cheats.unlimitedStars;
+  for (const id of ['cheat-invincible', 'cheat-stars']) $(id).disabled = locked; // not while playing with Archipelago
+  $('cheats-note').textContent = locked
+    ? 'Cheats are off while Archipelago is on.'
+    : 'For Punch-Out!! only. They take effect the next time the game starts.';
   const g = set.graphics;
   setSegmented('widescreen', String(g.widescreen));
   setSegmented('resolution', String(g.resolution));
@@ -531,6 +537,8 @@ $('ap-clear-patch').addEventListener('click', () => guarded(() => saveArchipelag
 for (const input of document.querySelectorAll('input[name="difficulty"]')) {
   input.addEventListener('change', () => guarded(() => api.saveSettings({ difficulty: input.value })));
 }
+$('cheat-invincible').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { invincible: $('cheat-invincible').checked } })));
+$('cheat-stars').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { unlimitedStars: $('cheat-stars').checked } })));
 $('skip-strap').addEventListener('change', () => guarded(() => api.saveSettings({ skipStrapScreen: $('skip-strap').checked })));
 // Segmented controls: data-setting on the group, data-value on each button.
 const SEGMENT_SAVE = {
