@@ -27021,10 +27021,10 @@ index ffb0e8c..5aff667 100644
          if (suspend < 1) {
 diff --git a/runtime/src/hle/punchout_ap_client.cpp b/runtime/src/hle/punchout_ap_client.cpp
 new file mode 100644
-index 0000000..78e39da
+index 0000000..5e7eb7a
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_client.cpp
-@@ -0,0 +1,1325 @@
+@@ -0,0 +1,1326 @@
 +// Punch-Out!! Archipelago: the built-in client. A port of the Punch-Out Wii apworld's client.py (world 1.6.x): the
 +// same checks, items, traps, death link and timers, run once per game frame (at most every 0.1 s, every frame while
 +// something is running, like client.py's fast poll) on the game thread, reading and writing game memory directly.
@@ -28336,6 +28336,7 @@ index 0000000..78e39da
 +extern "C" void PunchOut_ArchipelagoFrame() {
 +    using namespace PunchOutAp;
 +    using namespace PunchOutAp::ap_client;
++    CheatsFrame(); // Settings > Cheats (does nothing while an Archipelago session has the game)
 +    if (!g.running) {
 +        if (GameActive()) GameRelease();
 +        return;
@@ -28374,7 +28375,7 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..86a21d9
+index 0000000..f75d15c
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
 @@ -0,0 +1,650 @@
@@ -28624,6 +28625,29 @@ index 0000000..86a21d9
 +    std::fprintf(stderr, "[archipelago] game patch off\n");
 +}
 +
++// Cheat "Unlock all fighters" (Settings), run once per frame from PunchOut_ArchipelagoFrame (menus included): the
++// loaded profile's career counter (slot + 3, 0..26 fights done) is held at 26, so a new career or a profile load
++// can't put it back. Layout as the Archipelago client's FindSaveSlot: profile manager + 8 + index * 0xC48, the loaded
++// profile's index at manager + 0x5600.
++void CheatsFrame() {
++    using namespace ap_game;
++    if (GameActive() || !RuntimeConfigFile::CheatUnlockFighters()) return;
++    const uint32_t manager = R32(kProfileManagerPointer);
++    const uint32_t index = Ptr(manager) ? R32(manager + 0x5600) : 99;
++    uint32_t before = 0xFFFFFFFFu, after = 0xFFFFFFFFu;
++    if (index < 8) {
++        const uint32_t slot = manager + 8 + index * 0xC48u;
++        if (In(slot, 0xC48)) {
++            before = R8(slot + 3);
++            if (before < 26) W8(slot + 3, 26);
++            after = R8(slot + 3);
++        }
++    }
++    if (before != after) { // one line each time it actually changes something
++        std::fprintf(stderr, "[cheats] unlock fighters: profile %u, career counter %u -> %u\n", index, before, after);
++    }
++}
++
 +} // namespace PunchOutAp
 +
 +namespace PunchOutAp::ap_game {
@@ -28700,29 +28724,6 @@ index 0000000..86a21d9
 +// ---- 2. Fighter swap: scene change (PO 800D9C40, r3 = scene; pseudo PAL 80FF004C) ----
 +// The first scene change after a career pick swaps the opponent's name (state+0x10) through the seed's table.
 +extern "C" void PunchOut_SceneChange_pseudo(CpuContext* ctx) {
-+    // Cheat "Unlock all fighters" (Settings): the loaded profile's career counter (slot + 3, 0..26 fights done) is
-+    // raised to 26 at every scene change, before the next screen reads it. Layout as the Archipelago client's
-+    // FindSaveSlot: profile manager + 8 + index * 0xC48, the loaded profile's index at manager + 0x5600.
-+    if (!GameActive() && RuntimeConfigFile::CheatUnlockFighters()) {
-+        const uint32_t manager = R32(kProfileManagerPointer);
-+        const uint32_t index = Ptr(manager) ? R32(manager + 0x5600) : 99;
-+        uint32_t before = 0xFFFFFFFFu, after = 0xFFFFFFFFu;
-+        if (index < 8) {
-+            const uint32_t slot = manager + 8 + index * 0xC48u;
-+            if (In(slot, 0xC48)) {
-+                before = R8(slot + 3);
-+                if (before < 26) W8(slot + 3, 26);
-+                after = R8(slot + 3);
-+            }
-+        }
-+        static uint32_t lastLogged = 0;
-+        const uint32_t key = (index << 16) ^ (before << 8) ^ after;
-+        if (key != lastLogged) { // the log would otherwise fill up: one line per change
-+            lastLogged = key;
-+            std::fprintf(stderr, "[cheats] unlock fighters: scene change %08X, profile manager %08X, profile %u, career counter %u -> %u\n",
-+                         ctx->gpr[3], manager, index, before, after);
-+        }
-+    }
 +    const uint32_t state = R32(kGameStatePointer);
 +    if (GameActive() && Ptr(state)) {
 +        W32(kSwapDebug + 0xC, ctx->gpr[3]);
@@ -29030,10 +29031,10 @@ index 0000000..86a21d9
 +} // namespace PunchOutAp::ap_game
 diff --git a/runtime/src/hle/punchout_ap_game.h b/runtime/src/hle/punchout_ap_game.h
 new file mode 100644
-index 0000000..6b13f98
+index 0000000..e149d7f
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.h
-@@ -0,0 +1,51 @@
+@@ -0,0 +1,53 @@
 +// Punch-Out!! Archipelago: game-side hooks (punchout_ap_game.cpp) and the memory the client shares with them. The
 +// addresses are the Punch-Out Wii apworld's (dol_patch.py / client.py), so both sides match the Dolphin version.
 +#pragma once
@@ -29083,6 +29084,8 @@ index 0000000..6b13f98
 +void GameApply(const GameSeedData& seed);
 +void GameRelease();
 +bool GameActive();
++// The settings' cheats that act outside fights; called once per frame (punchout_ap_client.cpp).
++void CheatsFrame();
 +
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_net.cpp b/runtime/src/hle/punchout_ap_net.cpp
