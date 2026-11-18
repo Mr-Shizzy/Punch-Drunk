@@ -202,7 +202,8 @@ function renderSettings(s) {
   $('cheat-invincible').checked = set.cheats.invincible;
   $('cheat-stars').checked = set.cheats.unlimitedStars;
   $('cheat-unlock').checked = set.cheats.unlockFighters;
-  for (const id of ['cheat-invincible', 'cheat-stars', 'cheat-unlock']) $(id).disabled = locked; // not while playing with Archipelago
+  $('cheat-gallery').checked = set.cheats.unlockGallery;
+  for (const id of ['cheat-invincible', 'cheat-stars', 'cheat-unlock', 'cheat-gallery']) $(id).disabled = locked; // not while playing with Archipelago
   $('cheats-note').textContent = locked
     ? 'Cheats are off while Archipelago is on.'
     : 'For Punch-Out!! only. They take effect the next time the game starts.';
@@ -540,6 +541,7 @@ for (const input of document.querySelectorAll('input[name="difficulty"]')) {
 }
 $('cheat-invincible').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { invincible: $('cheat-invincible').checked } })));
 $('cheat-unlock').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { unlockFighters: $('cheat-unlock').checked } })));
+$('cheat-gallery').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { unlockGallery: $('cheat-gallery').checked } })));
 $('cheat-stars').addEventListener('change', () => guarded(() => api.saveSettings({ cheats: { unlimitedStars: $('cheat-stars').checked } })));
 $('skip-strap').addEventListener('change', () => guarded(() => api.saveSettings({ skipStrapScreen: $('skip-strap').checked })));
 // Segmented controls: data-setting on the group, data-value on each button.

@@ -753,7 +753,7 @@ async function play() {
   else writeGameDesktopEntry(state.binary);
   prepareVcRuntime(p.port);
   // The unlock cheat rewrites progress: make sure there is a backup of the save before the game starts.
-  if (game === 'punchout' && readGameSettings().cheats.unlockFighters && !fs.existsSync(path.join(p.port, 'UserData', 'save backups'))) backUpSave();
+  if (game === 'punchout' && (readGameSettings().cheats.unlockFighters || readGameSettings().cheats.unlockGallery) && !fs.existsSync(path.join(p.port, 'UserData', 'save backups'))) backUpSave();
   gameRunning = true;
   send('state-changed');
   const logFile = path.join(p.logs, 'game.log');
@@ -834,7 +834,8 @@ function readGameSettings() {
     cheats: {
       invincible: get('cheats', 'invincible', false) === true,
       unlimitedStars: get('cheats', 'unlimited_stars', false) === true,
-      unlockFighters: get('cheats', 'unlock_fighters', false) === true
+      unlockFighters: get('cheats', 'unlock_fighters', false) === true,
+      unlockGallery: get('cheats', 'unlock_gallery', false) === true
     },
     controls: {
       lockMouse: get('punchout_controls', 'lock_mouse', false) === true,
@@ -880,6 +881,10 @@ function writeGameSettings(s) {
       // Unlocking changes the save for good, so keep a copy of it the moment the switch goes on.
       if (s.cheats.unlockFighters && toml.get(text, 'cheats', 'unlock_fighters') !== true) backUpSave();
       text = toml.set(text, 'cheats', 'unlock_fighters', s.cheats.unlockFighters);
+    }
+    if (typeof s.cheats.unlockGallery === 'boolean') {
+      if (s.cheats.unlockGallery && toml.get(text, 'cheats', 'unlock_gallery') !== true) backUpSave();
+      text = toml.set(text, 'cheats', 'unlock_gallery', s.cheats.unlockGallery);
     }
   }
   const c = s.controls;
