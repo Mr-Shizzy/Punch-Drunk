@@ -27,6 +27,7 @@ You bring your own copies of the games. No game files are included.
 - **Anti-aliasing** setting: Off or 4×.
 - **Clearer resolution labels:** each choice shows its pixel height (Native 480p, 720p, 960p, 1440p, 1920p, 2880p, 3840p), plus a line spelling out the exact size.
 - **Lock aspect ratio is on by default** for new setups. On larger or wider monitors the picture keeps its aspect ratio, with black bars on each side, instead of stretching. You can turn it off in Settings. (It doesn't add extra scenery on the sides.)
+- **Cheats** for Punch-Out!! (Settings > Cheats, all off by default): Invincible Little Mac and Unlimited stars. They switch themselves off while Archipelago is on.
 - **Archipelago** now has a short explanation in Settings. It's optional and only for people joining a randomizer group.
 
 ## Look

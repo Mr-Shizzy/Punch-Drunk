@@ -803,6 +803,14 @@ function ensureGameConfig() {
   fs.writeFileSync(p.gameConfig, text);
 }
 
+// A dated copy of the game's save folder, beside it, for the cheats that rewrite progress.
+function backUpSave() {
+  const dir = path.join(gamePaths('punchout').port, 'UserData', 'NAND', 'save_games');
+  if (!fs.existsSync(dir)) return;
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+  try { fs.cpSync(dir, `${dir} backup ${stamp}`, { recursive: true }); } catch (err) { log(`[cheats] save backup failed: ${err.message}`); }
+}
+
 function readGameSettings() {
   let text = '';
   try { text = fs.readFileSync(paths().gameConfig, 'utf8'); } catch { /* none yet */ }
@@ -817,7 +825,8 @@ function readGameSettings() {
     skipStrapScreen: get('punchout', 'skip_strap_screen', true),
     cheats: {
       invincible: get('cheats', 'invincible', false) === true,
-      unlimitedStars: get('cheats', 'unlimited_stars', false) === true
+      unlimitedStars: get('cheats', 'unlimited_stars', false) === true,
+      unlockFighters: get('cheats', 'unlock_fighters', false) === true
     },
     controls: {
       lockMouse: get('punchout_controls', 'lock_mouse', false) === true,
@@ -859,6 +868,11 @@ function writeGameSettings(s) {
   if (s.cheats) {
     if (typeof s.cheats.invincible === 'boolean') text = toml.set(text, 'cheats', 'invincible', s.cheats.invincible);
     if (typeof s.cheats.unlimitedStars === 'boolean') text = toml.set(text, 'cheats', 'unlimited_stars', s.cheats.unlimitedStars);
+    if (typeof s.cheats.unlockFighters === 'boolean') {
+      // Unlocking changes the save for good, so keep a copy of it the moment the switch goes on.
+      if (s.cheats.unlockFighters && toml.get(text, 'cheats', 'unlock_fighters') !== true) backUpSave();
+      text = toml.set(text, 'cheats', 'unlock_fighters', s.cheats.unlockFighters);
+    }
   }
   const c = s.controls;
   if (c) {
