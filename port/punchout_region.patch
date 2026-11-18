@@ -28374,10 +28374,10 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..d047e2d
+index 0000000..86a21d9
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,638 @@
+@@ -0,0 +1,650 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28706,9 +28706,21 @@ index 0000000..d047e2d
 +    if (!GameActive() && RuntimeConfigFile::CheatUnlockFighters()) {
 +        const uint32_t manager = R32(kProfileManagerPointer);
 +        const uint32_t index = Ptr(manager) ? R32(manager + 0x5600) : 99;
++        uint32_t before = 0xFFFFFFFFu, after = 0xFFFFFFFFu;
 +        if (index < 8) {
 +            const uint32_t slot = manager + 8 + index * 0xC48u;
-+            if (In(slot, 0xC48) && R8(slot + 3) < 26) W8(slot + 3, 26);
++            if (In(slot, 0xC48)) {
++                before = R8(slot + 3);
++                if (before < 26) W8(slot + 3, 26);
++                after = R8(slot + 3);
++            }
++        }
++        static uint32_t lastLogged = 0;
++        const uint32_t key = (index << 16) ^ (before << 8) ^ after;
++        if (key != lastLogged) { // the log would otherwise fill up: one line per change
++            lastLogged = key;
++            std::fprintf(stderr, "[cheats] unlock fighters: scene change %08X, profile manager %08X, profile %u, career counter %u -> %u\n",
++                         ctx->gpr[3], manager, index, before, after);
 +        }
 +    }
 +    const uint32_t state = R32(kGameStatePointer);

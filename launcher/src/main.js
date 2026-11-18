@@ -752,6 +752,8 @@ async function play() {
   if (game === 'doclouis') ensureDocConfig();
   else writeGameDesktopEntry(state.binary);
   prepareVcRuntime(p.port);
+  // The unlock cheat rewrites progress: make sure there is a backup of the save before the game starts.
+  if (game === 'punchout' && readGameSettings().cheats.unlockFighters && !fs.existsSync(path.join(p.port, 'UserData', 'save backups'))) backUpSave();
   gameRunning = true;
   send('state-changed');
   const logFile = path.join(p.logs, 'game.log');
@@ -803,12 +805,18 @@ function ensureGameConfig() {
   fs.writeFileSync(p.gameConfig, text);
 }
 
-// A dated copy of the game's save folder, beside it, for the cheats that rewrite progress.
+// A dated copy of Punch-Out!!'s save (the game keeps it under NAND/title/00010000/<its title>/data), kept in a
+// "save backups" folder beside the game's settings, for the cheats that rewrite progress.
 function backUpSave() {
-  const dir = path.join(gamePaths('punchout').port, 'UserData', 'NAND', 'save_games');
-  if (!fs.existsSync(dir)) return;
+  const root = path.join(gamePaths('punchout').port, 'UserData');
+  const titles = path.join(root, 'NAND', 'title', '00010000');
   const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-  try { fs.cpSync(dir, `${dir} backup ${stamp}`, { recursive: true }); } catch (err) { log(`[cheats] save backup failed: ${err.message}`); }
+  try {
+    for (const title of fs.existsSync(titles) ? fs.readdirSync(titles) : []) {
+      const data = path.join(titles, title, 'data');
+      if (fs.existsSync(data)) fs.cpSync(data, path.join(root, 'save backups', `${stamp} ${title}`), { recursive: true });
+    }
+  } catch (err) { log(`[cheats] save backup failed: ${err.message}`); }
 }
 
 function readGameSettings() {
