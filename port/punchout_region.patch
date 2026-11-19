@@ -28381,10 +28381,10 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..0f06c5d
+index 0000000..5901223
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,686 @@
+@@ -0,0 +1,690 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28659,9 +28659,13 @@ index 0000000..0f06c5d
 +        int changed = 0;
 +        for (uint32_t n = 0; n < 26; ++n) {
 +            const uint32_t record = slot + 0x71 + n * 0x5C;
-+            if (R8(record + 10) != 1 || R8(record + 18) != 1) {
-+                W8(record + 10, 1);
-+                W8(record + 18, 1);
++            // Experiment (audio did not open with +10/+18 alone): also the three challenge flags (+0..+2, the ones the
++            // Archipelago client reads) and the best result in each of the rank bytes (+26, +30, +62, +66).
++            static const uint32_t kOnes[] = {0, 1, 2, 10, 18, 26, 30, 62, 66};
++            bool differs = false;
++            for (uint32_t offset : kOnes) differs = differs || R8(record + offset) != 1;
++            if (differs) {
++                for (uint32_t offset : kOnes) W8(record + offset, 1);
 +                ++changed;
 +            }
 +        }
