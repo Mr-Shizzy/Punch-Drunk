@@ -28381,10 +28381,10 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..1098a98
+index 0000000..0f06c5d
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,664 @@
+@@ -0,0 +1,686 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28638,7 +28638,8 @@ index 0000000..1098a98
 +void CheatsFrame() {
 +    using namespace ap_game;
 +    const bool fighters = RuntimeConfigFile::CheatUnlockFighters(), gallery = RuntimeConfigFile::CheatUnlockGallery();
-+    if (GameActive() || (!fighters && !gallery)) return;
++    const bool anyCheat = fighters || gallery || RuntimeConfigFile::CheatInvincible() || RuntimeConfigFile::CheatUnlimitedStars();
++    if (GameActive() || !anyCheat) return;
 +    const uint32_t manager = R32(kProfileManagerPointer);
 +    const uint32_t index = Ptr(manager) ? R32(manager + 0x5600) : 99;
 +    if (index >= 8) return;
@@ -28666,6 +28667,27 @@ index 0000000..1098a98
 +        }
 +        if (changed) std::fprintf(stderr, "[cheats] unlock gallery: profile %u, %d fight records marked beaten\n", index, changed);
 +    }
++    // Research aid: whenever any cheat is on, log what the GAME changes in the loaded profile (this function's own
++    // writes are in the baseline), each byte at most three times, to learn how it stores gallery unlocks.
++    static std::vector<uint8_t> previous;
++    static uint32_t previousSlot = 0;
++    static uint8_t reported[0xC48] = {};
++    std::vector<uint8_t> now(0xC48);
++    for (uint32_t i = 0; i < 0xC48; ++i) now[i] = R8(slot + i);
++    if (previousSlot == slot && previous.size() == now.size()) {
++        for (uint32_t i = 0; i < 0xC48; ++i) {
++            if (now[i] == previous[i] || reported[i] >= 3) continue;
++            ++reported[i];
++            if (i >= 0x71 && i < 0x71 + 26 * 0x5C) {
++                std::fprintf(stderr, "[watch] profile %u fight %u +%u: %02X -> %02X\n", index, (i - 0x71) / 0x5C + 1,
++                             (i - 0x71) % 0x5C, previous[i], now[i]);
++            } else {
++                std::fprintf(stderr, "[watch] profile %u +0x%03X: %02X -> %02X\n", index, i, previous[i], now[i]);
++            }
++        }
++    }
++    previous = std::move(now);
++    previousSlot = slot;
 +}
 +
 +} // namespace PunchOutAp
