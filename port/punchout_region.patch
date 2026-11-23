@@ -22883,7 +22883,7 @@ index 0000000..1c71f1d
 +    return on;
 +}
 diff --git a/runtime/include/runtime_config.h b/runtime/include/runtime_config.h
-index ea5a12b..8babf8e 100644
+index ea5a12b..90ded3b 100644
 --- a/runtime/include/runtime_config.h
 +++ b/runtime/include/runtime_config.h
 @@ -4,6 +4,7 @@
@@ -22894,7 +22894,7 @@ index ea5a12b..8babf8e 100644
  #include <cstddef>
  #include <cstdint>
  #include <filesystem>
-@@ -48,9 +49,16 @@ struct RuntimeUserConfig {
+@@ -48,9 +49,17 @@ struct RuntimeUserConfig {
      std::optional<bool> vsync;
      std::optional<bool> gxWorker;
      std::optional<bool> disableCopyFilter;
@@ -22908,10 +22908,11 @@ index ea5a12b..8babf8e 100644
 +    std::optional<bool> cheatUnlimitedStars;
 +    std::optional<bool> cheatUnlockFighters;
 +    std::optional<bool> cheatUnlockGallery;
++    std::optional<uint32_t> cheatGalleryParts; // test aid: which groups of record bytes the gallery cheat sets (bit mask)
      std::optional<uint32_t> disabledPostProcessingPaths;
      std::optional<float> audioVolume;
      std::optional<float> audioMusicVolume;
-@@ -82,6 +90,8 @@ struct RuntimeUserConfig {
+@@ -82,6 +91,8 @@ struct RuntimeUserConfig {
      std::optional<std::string> discordClientId;
      std::optional<std::string> nandRoot;
      std::optional<std::string> dvdRoot;
@@ -22920,7 +22921,7 @@ index ea5a12b..8babf8e 100644
      // The one canonical Retro Rewind installation, owned and updated by the frontend. Setup records
      // it here instead of copying the pack, so an asset-only update is visible on the next launch.
      std::optional<std::string> retroRewindRoot;
-@@ -93,6 +103,20 @@ struct RuntimeUserConfig {
+@@ -93,6 +104,20 @@ struct RuntimeUserConfig {
      std::optional<bool> rumbleEnabled;
      // Shake a motion controller to press the D-pad, like shaking a Wii Remote.
      std::optional<bool> motionTrick;
@@ -22941,7 +22942,7 @@ index ea5a12b..8babf8e 100644
      std::optional<int32_t> motionTrickSensitivity;
      std::optional<int32_t> muteHotkey;
      std::map<std::string, std::string> controllerExpressions;
-@@ -271,7 +295,7 @@ inline void EnsureConfigFile() {
+@@ -271,7 +296,7 @@ inline void EnsureConfigFile() {
          return;
      }
  
@@ -22950,7 +22951,7 @@ index ea5a12b..8babf8e 100644
      if (!output) {
          return;
      }
-@@ -387,6 +411,15 @@ inline void AppendOverlayRoots(RuntimeUserConfig& config, const std::string& roo
+@@ -387,6 +412,15 @@ inline void AppendOverlayRoots(RuntimeUserConfig& config, const std::string& roo
      }
  }
  
@@ -22966,7 +22967,7 @@ index ea5a12b..8babf8e 100644
  // Reads every supported setting out of a parsed Config.toml document.
  inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
      RuntimeUserConfig config;
-@@ -401,6 +434,23 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -401,6 +435,23 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
  
      config.rumbleEnabled = FindConfigValue<bool>(document, "controller", "rumble");
      config.motionTrick = FindConfigValue<bool>(document, "controller", "motion_trick");
@@ -22990,7 +22991,7 @@ index ea5a12b..8babf8e 100644
      if (const auto value = FindConfigInt(document, "controller", "motion_trick_sensitivity"); value && *value >= 1 && *value <= 5) {
          config.motionTrickSensitivity = *value;
      }
-@@ -463,7 +513,16 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -463,7 +514,17 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
      config.vsync = FindConfigValue<bool>(document, "video", "vsync");
      config.gxWorker = FindConfigValue<bool>(document, "video", "gx_worker");
      config.disableCopyFilter = FindConfigValue<bool>(document, "video", "disable_copy_filter");
@@ -23000,6 +23001,7 @@ index ea5a12b..8babf8e 100644
 +    config.cheatUnlimitedStars = FindConfigValue<bool>(document, "cheats", "unlimited_stars");
 +    config.cheatUnlockFighters = FindConfigValue<bool>(document, "cheats", "unlock_fighters");
 +    config.cheatUnlockGallery = FindConfigValue<bool>(document, "cheats", "unlock_gallery");
++    config.cheatGalleryParts = FindConfigUint(document, "cheats", "gallery_parts");
 +    // Edge smoothing: 1 (off) or 4 samples. (WebGPU only guarantees those two.)
 +    if (auto value = FindConfigUint(document, "video", "msaa"); value && (*value == 1 || *value == 4)) {
 +        config.msaa = *value;
@@ -23007,7 +23009,7 @@ index ea5a12b..8babf8e 100644
      config.textureReplacements = FindConfigValue<bool>(document, "video", "texture_replacements");
      config.textureDumps = FindConfigValue<bool>(document, "video", "texture_dumps");
      if (auto value = FindConfigUint(document, "video", "disabled_post_processing_paths");
-@@ -506,6 +565,7 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
+@@ -506,6 +567,7 @@ inline RuntimeUserConfig ParseConfigDocument(const toml::value& document) {
  
      config.nandRoot = FindConfigValue<std::string>(document, "paths", "nand_root");
      config.dvdRoot = FindConfigValue<std::string>(document, "paths", "dvd_root");
@@ -23015,7 +23017,7 @@ index ea5a12b..8babf8e 100644
      config.retroRewindRoot = FindConfigValue<std::string>(document, "paths", "retro_rewind_root");
      if (auto roots = FindConfigValue<std::vector<std::string>>(document, "paths", "overlay_roots")) {
          for (auto& root : *roots) {
-@@ -531,10 +591,112 @@ inline RuntimeUserConfig ParseConfig(std::istream& input, std::string sourceName
+@@ -531,10 +593,112 @@ inline RuntimeUserConfig ParseConfig(std::istream& input, std::string sourceName
      }
  }
  
@@ -23129,7 +23131,7 @@ index ea5a12b..8babf8e 100644
  }
  
  inline const RuntimeUserConfig& Get() {
-@@ -589,8 +751,8 @@ inline std::optional<std::string> UpdateSettingText(const std::string& text, std
+@@ -589,8 +753,8 @@ inline std::optional<std::string> UpdateSettingText(const std::string& text, std
  
  // Update one TOML value without discarding unrelated settings or user-specific paths. This is
  // used by the in-game F10 settings bar. An unparseable file is left untouched.
@@ -23140,7 +23142,7 @@ index ea5a12b..8babf8e 100644
      std::ostringstream existing;
      if (std::ifstream input(path, std::ios::binary); input) {
          existing << input.rdbuf();
-@@ -605,7 +767,9 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
+@@ -605,7 +769,9 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
      if (path.has_parent_path()) {
          std::filesystem::create_directories(path.parent_path(), ec);
      }
@@ -23151,7 +23153,7 @@ index ea5a12b..8babf8e 100644
      if (!output) {
          std::cerr << "[runtime-config] Unable to write " << PathToUtf8(path) << std::endl;
          return false;
-@@ -614,6 +778,15 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
+@@ -614,6 +780,15 @@ inline bool WriteSetting(std::string_view section, std::string_view key, std::st
      return static_cast<bool>(output);
  }
  
@@ -23167,7 +23169,7 @@ index ea5a12b..8babf8e 100644
  inline std::string FormatString(std::string_view value) {
      return toml::format(toml::value(std::string(value)));
  }
-@@ -675,6 +848,11 @@ inline bool SetVsync(bool value) {
+@@ -675,6 +850,11 @@ inline bool SetVsync(bool value) {
      return WriteSetting("video", "vsync", value ? "true" : "false");
  }
  
@@ -23179,7 +23181,7 @@ index ea5a12b..8babf8e 100644
  inline bool SetDisableCopyFilter(bool value) {
      Mutable().disableCopyFilter = value;
      return WriteSetting("video", "disable_copy_filter", value ? "true" : "false");
-@@ -719,6 +897,59 @@ inline bool SetRumbleEnabled(bool value) {
+@@ -719,6 +899,59 @@ inline bool SetRumbleEnabled(bool value) {
      return WriteSetting("controller", "rumble", value ? "true" : "false");
  }
  
@@ -23239,7 +23241,7 @@ index ea5a12b..8babf8e 100644
  inline bool MotionTrickEnabled(bool fallback = false) {
      return Get().motionTrick.value_or(fallback);
  }
-@@ -746,6 +977,24 @@ inline bool SetMuteHotkey(int32_t value) {
+@@ -746,6 +979,24 @@ inline bool SetMuteHotkey(int32_t value) {
      return WriteSetting("audio", "mute_key", std::to_string(value));
  }
  
@@ -23264,7 +23266,7 @@ index ea5a12b..8babf8e 100644
  inline bool SetAudioVolume(float value) {
      value = std::clamp(value, 0.0f, 1.0f);
      Mutable().audioVolume = value;
-@@ -975,10 +1224,34 @@ inline bool Vsync(bool fallback = false) {
+@@ -975,10 +1226,38 @@ inline bool Vsync(bool fallback = false) {
      return Get().vsync.value_or(fallback);
  }
  
@@ -23296,10 +23298,14 @@ index ea5a12b..8babf8e 100644
 +    return Get().cheatUnlockGallery.value_or(false);
 +}
 +
++inline uint32_t CheatGalleryParts() {
++    return Get().cheatGalleryParts.value_or(7);
++}
++
  inline bool ShowFps(bool fallback = true) {
      return Get().showFps.value_or(fallback);
  }
-@@ -1033,6 +1306,13 @@ inline std::filesystem::path ResolveRelativeToConfig(const std::string& value) {
+@@ -1033,6 +1312,13 @@ inline std::filesystem::path ResolveRelativeToConfig(const std::string& value) {
      return ResolveRelativeTo(ResolveConfigPath().parent_path(), value);
  }
  
@@ -28381,10 +28387,10 @@ index 0000000..1720be6
 +} // namespace PunchOutAp
 diff --git a/runtime/src/hle/punchout_ap_game.cpp b/runtime/src/hle/punchout_ap_game.cpp
 new file mode 100644
-index 0000000..5901223
+index 0000000..1dd5505
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,690 @@
+@@ -0,0 +1,698 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28659,15 +28665,23 @@ index 0000000..5901223
 +        int changed = 0;
 +        for (uint32_t n = 0; n < 26; ++n) {
 +            const uint32_t record = slot + 0x71 + n * 0x5C;
-+            // Experiment (audio did not open with +10/+18 alone): also the three challenge flags (+0..+2, the ones the
-+            // Archipelago client reads) and the best result in each of the rank bytes (+26, +30, +62, +66).
-+            static const uint32_t kOnes[] = {0, 1, 2, 10, 18, 26, 30, 62, 66};
++            // Test aid: [cheats] gallery_parts (default 7 = all) picks the groups of bytes set to 1: bit 0 the beaten
++            // flags (+10, +18), bit 1 the three challenge flags (+0..+2), bit 2 the rank bytes (+26, +30, +62, +66).
++            const uint32_t parts = RuntimeConfigFile::CheatGalleryParts();
++            static const uint32_t kBeaten[] = {10, 18}, kChallenges[] = {0, 1, 2}, kRanks[] = {26, 30, 62, 66};
 +            bool differs = false;
-+            for (uint32_t offset : kOnes) differs = differs || R8(record + offset) != 1;
-+            if (differs) {
-+                for (uint32_t offset : kOnes) W8(record + offset, 1);
-+                ++changed;
-+            }
++            auto apply = [&](const uint32_t* offsets, size_t count, bool write) {
++                for (size_t i = 0; i < count; ++i) {
++                    if (R8(record + offsets[i]) != 1) {
++                        differs = true;
++                        if (write) W8(record + offsets[i], 1);
++                    }
++                }
++            };
++            if (parts & 1u) apply(kBeaten, 2, true);
++            if (parts & 2u) apply(kChallenges, 3, true);
++            if (parts & 4u) apply(kRanks, 4, true);
++            if (differs) ++changed;
 +        }
 +        if (changed) std::fprintf(stderr, "[cheats] unlock gallery: profile %u, %d fight records marked beaten\n", index, changed);
 +    }
