@@ -1,4 +1,4 @@
-# POW: Recompiled!! Launcher
+# Punch-Drunk launcher (fork of POW: Recompiled!! Launcher)
 
 Not affiliated with or endorsed by Nintendo. Punch-Out!! is a trademark of Nintendo; the games are © Nintendo.
 

@@ -1,85 +1,61 @@
-100% coded with AI. Extensive testing by me.
+# Punch-Drunk: Punch-Out (Wii) Recomp
 
-# POW: Recompiled!!
+A portable Windows launcher for **Punch-Out!!** (Wii, 2009) and **Doc Louis's Punch-Out!!** (WiiWare, 2009) on PC.
 
-### A Punch-Out!! and Doc Louis's Punch-Out!! PC recompilation
+This is a fork of [POW: Recompiled](https://gitlab.com/fist-in/POW-Recompiled) by fist-in. The original author did great
+work on the port itself, but the install process could be troublesome. This fork makes it a simple unzip-and-run
+program, adds a few cheats, and fixes building and loading from external SSDs.
 
-**POW** stands for **P**unch-**O**ut!! **W**ii. A fan-made PC port of **Punch-Out!!** (Wii, 2009) and **Doc Louis's
-Punch-Out!!** (WiiWare, 2009), built with the [WiiCompiled](https://github.com/patchzyy/wiicompiled) static
-recompiler. Play with a controller or the keyboard, at any resolution, with built-in
-[Archipelago](https://archipelago.gg) multiworld support (Punch-Out!!).
+> **Unofficial fan project. Not affiliated with or endorsed by Nintendo.** It includes no game files. You bring your own
+> disc image and WAD. Punch-Out!! and Doc Louis's Punch-Out!! are © Nintendo.
 
-> **Not affiliated with or endorsed by Nintendo.** This is a non-commercial fan project. Punch-Out!! and Nintendo are
-> trademarks of Nintendo; the games and their content are © Nintendo.
+![Home screen](docs/screenshots/home.png)
 
-**Bring your own copy.** Nothing from the games is included here or in the downloads. The launcher builds the port on
-your computer from your own copy of Punch-Out!! (USA) and, if you have it, Doc Louis's Punch-Out!! (USA).
+## What's different from the original
 
-*This project was called Re-Punched!! before version 0.3.1. The new launcher keeps your saves, settings and build
-folder from the old one; it just asks you to update the build once.*
+- **Portable.** Unzip it and run it. No installer. Everything stays in its own folder.
+- **Easier setup.** One launcher for both games. Doc Louis's installs straight from your own WAD file, with no emulator.
+  The build tools are fetched for you, and the Visual C++ runtime is included.
+- **Works on external drives**, including exFAT SSDs.
+- **Cheats** (all off by default): Invincible Little Mac, Unlimited stars, Unlock all fighters, Unlock the gallery.
+- **Small extras:** anti-aliasing, clearer resolution labels, aspect ratio locked by default, a frame-rate switch,
+  and Escape opens the Exit box.
 
-## Download
+The full list is in [FORK_CHANGES.md](FORK_CHANGES.md).
 
-Get the launcher from the [latest release](https://gitlab.com/fist-in/POW-Recompiled/-/releases/permalink/latest):
+![Settings](docs/screenshots/settings.png)
 
-| Your computer | Download |
-| --- | --- |
-| Linux (x86-64) | `POW-Recompiled-Launcher.AppImage` |
-| Steam Deck (SteamOS) | `POW-Recompiled-Launcher-SteamDeck.AppImage` |
-| Windows 10/11 (x64) | `POW-Recompiled-<version>-Windows-x64.zip` (portable, no installer) |
+## How to use it
 
-They're listed under **Packages** on the release. The Steam Deck launcher is the Linux one with its own build tools
-inside, so it's a bigger download, but SteamOS needs nothing installed.
+1. Download the zip from [Releases](../../releases/latest) and unzip it to a folder with a plain path (letters,
+   numbers, spaces), for example `C:\Games\Punch-Drunk`.
+2. Run `Punch-Drunk.exe`.
+3. Press **Set up** on a game, pick your disc image (Punch-Out!!) or your WAD (Doc Louis's), and let it build. The first
+   build takes a while and needs about 10 GB of free space. After that it's just **Play**.
 
-## Play
+Doc Louis's needs the Wii common key from your own console (the `keys.bin` from a BootMii backup, or paste the key).
+It is used once to unpack the WAD and is never saved.
 
-1. Open the launcher.
-   - Linux and Steam Deck: make the AppImage executable, then run it (on the Steam Deck, in Desktop Mode).
-   - Windows: unzip it to a folder with a plain path (letters, numbers, spaces, dots, dashes, underscores), for
-     example `C:\Games\POW Recompiled`, and run `POW Recompiled Launcher.exe`. It's portable: settings, build
-     tools, your games and saves all stay in that folder, and deleting the folder removes everything. Windows may
-     say "Windows protected your PC" because the program isn't code-signed; click **More info**, then **Run anyway**.
-2. Follow the three setup steps: get the build tools (Linux: install the packages it lists; Windows: press
-   **Download build tools**; Steam Deck: they come with the launcher), choose your disc (ISO, WBFS or RVZ), and press
-   **Build**. The first build takes a while; after that it's just **Play**.
-3. Doc Louis's Punch-Out!!: pick its tile at the top of the launcher, press **Choose WAD…** and pick your WAD. To
-   unpack it, the launcher needs the Wii common key from your own console: choose the `keys.bin` from your BootMii
-   backup, or paste the key. It's used once to unpack the WAD and is never saved, and none is included with the
-   launcher. Then **Build** and **Play**, like Punch-Out!!. Both games use the same controls and settings.
+Controls: arrow keys or WASD to move, J and K to punch, L or Space for the star punch, Enter to pause. Controllers work
+too, and everything can be changed in the launcher.
 
-You need: a clean (unpatched) Punch-Out!! (USA) disc image made from your own disc, about 10 GB of free space for the build (more on
-Windows, where the compiler is downloaded too), and 64-bit Linux, SteamOS or Windows 10/11. For Doc Louis's
-Punch-Out!!: a WAD of your own copy (USA, WPCE01), your console's Wii common key, and about as much space again.
+## Status
 
-## Features
-
-- Controller or keyboard: WASD or the arrows to move, J and K to punch, L or Space for the star punch, Enter to pause.
-  In menus, J chooses, K goes back, and Q and E turn pages (a controller's bumpers); the mouse works too (left click
-  chooses, right click goes back). Change any key or button on the launcher's Controls page or in the game (F10 →
-  Controller settings). The game's button prompts show your own keys or buttons, Xbox or PlayStation style. With
-  several controllers, pick player 1's on the Controls page.
-- Graphics: any render resolution, 16:9 or 4:3, windowed or fullscreen (launcher Settings, or F10 in the game). On
-  weaker hardware, **Effects at native resolution** renders the game's screen effects at the Wii's resolution.
-- Difficulty modes (Punch-Out!!): Hard (no restarting or quitting mid-fight) and Insane (one knockdown and you're out).
-- Doc Louis's Punch-Out!!: the whole game, at a steady 60 fps, with the same controls, D-pad menus and settings.
-- Archipelago: connect from the launcher or in the game (F10). Items, traps, death link and the in-game message panel
-  are built in; no separate client needed. Generate with the [Punch-Out Wii apworld](https://gitlab.com/fist-in/punchout-apworld), version
-  1.6.1 or newer; older versions work too if you choose the seed's .appunchout file in the launcher's Archipelago page.
-
-## What's in this repository
-
-| Folder | What it is | License |
-| --- | --- | --- |
-| `launcher/` | The launcher (Electron) | MIT |
-| `port/` | The changes to WiiCompiled for both games (`punchout_region.patch`) and the translator projects (`projects/punchout`, `projects/doclouis`) | GPL-3.0 (as WiiCompiled) |
-
-To run the launcher from source: `cd launcher && npm install && npm start`. To build the Linux AppImage: `npm run dist`;
-the portable Windows zip: `npm run dist:win` (on Windows; it also self-tests the built launcher).
+- Tested only on the author's own Windows 11 PC. Other graphics cards and Windows versions are untested.
+- The program is not code-signed, so Windows SmartScreen or your antivirus may warn the first time you run it.
+- The two unlock cheats change your save file for good. The launcher makes a backup copy first.
+- The Linux and Steam Deck parts of the original launcher are still in the source, but they are untested here and
+  not part of the release.
 
 ## Credits
 
-WiiCompiled (GPL-3.0); SMS Launcher by Chase Myers (MIT), this launcher's starting point; controller glyphs by Arks
-(@ScissorMarks), CC BY 4.0; Open Sans (SIL OFL 1.1); nod by Luke Street (MIT/Apache-2.0); nlohmann/json (MIT);
-Archipelago.
+- [POW: Recompiled](https://gitlab.com/fist-in/POW-Recompiled) by fist-in: the port, the launcher and the Archipelago support.
+- [WiiCompiled](https://github.com/patchzyy/wiicompiled), the recompiler the port is built on.
+- SMS Launcher by Chase Myers, the launcher's starting point. Controller glyphs by Arks (CC BY 4.0). Open Sans (SIL OFL).
+  nod by Luke Street. Full list in `THIRD_PARTY_NOTICES.txt`.
+- Built with help from Claude (Anthropic); designed and tested by Mr-Shizzy.
 
-Punch-Out!! is © Nintendo. POW: Recompiled!! is a fan project, not affiliated with or endorsed by Nintendo.
+## License
+
+Copyright (C) 2026 Mr-Shizzy for the changes in this fork. GPL-3.0, see [LICENSE](LICENSE). The original launcher code
+stays under its MIT license, see [launcher/LICENSE](launcher/LICENSE).

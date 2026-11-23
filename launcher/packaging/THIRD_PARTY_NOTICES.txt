@@ -17,7 +17,7 @@ msvcp140.dll, msvcp140_atomic_wait.dll)
 
 POW: Recompiled!! launcher (MIT) and port files (GPL-3.0)
   Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
-  LICENSE-launcher.txt and LICENSE-port.txt.
+  LICENSE-launcher.txt and LICENSE-port.txt. The changes made in this fork are GPL-3.0 (LICENSE.txt).
 
 Controller button glyphs: UI Elements by Arks (@ScissorMarks), CC BY 4.0 (https://arks.itch.io).
 
