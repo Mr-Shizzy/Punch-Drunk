@@ -15,9 +15,10 @@ msvcp140.dll, msvcp140_atomic_wait.dll)
   Windows: the launcher copies them beside the game only when Windows' own copy is missing or older.
   resources\vcruntime\VERSION.json says which version this is.
 
-POW: Recompiled!! launcher (MIT) and port files (GPL-3.0)
+Punch-Drunk launcher (MIT) and the port files (GPL-3.0)
   Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
-  LICENSE-launcher.txt and LICENSE-port.txt. The changes made in this fork are GPL-3.0 (LICENSE.txt).
+  The launcher is MIT: LICENSE.txt. The port files (the changes to WiiCompiled) are GPL-3.0:
+  LICENSE-port.txt.
 
 Controller button glyphs: UI Elements by Arks (@ScissorMarks), CC BY 4.0 (https://arks.itch.io).
 

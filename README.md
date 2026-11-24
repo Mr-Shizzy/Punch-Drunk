@@ -57,5 +57,5 @@ too, and everything can be changed in the launcher.
 
 ## License
 
-Copyright (C) 2026 Mr-Shizzy for the changes in this fork. GPL-3.0, see [LICENSE](LICENSE). The original launcher code
-stays under its MIT license, see [launcher/LICENSE](launcher/LICENSE).
+The launcher is MIT, like the original. See [LICENSE](LICENSE). The `port/` folder (the changes to WiiCompiled) is
+GPL-3.0, as WiiCompiled is. See [port/LICENSE](port/LICENSE).

@@ -49,7 +49,6 @@ fs.copyFileSync(path.join(__dirname, 'README.txt'), path.join(out, 'README.txt')
 fs.copyFileSync(path.join(__dirname, 'THIRD_PARTY_NOTICES.txt'), path.join(out, 'THIRD_PARTY_NOTICES.txt'));
 if (!fs.existsSync(path.join(out, 'resources', 'vcruntime', 'vcruntime140.dll'))) throw new Error('The Visual C++ runtime is missing from the build');
 fs.copyFileSync(path.join(LAUNCHER, '..', 'LICENSE'), path.join(out, 'LICENSE.txt'));
-fs.copyFileSync(path.join(LAUNCHER, 'LICENSE'), path.join(out, 'LICENSE-launcher.txt'));
 fs.copyFileSync(path.join(LAUNCHER, '..', 'port', 'LICENSE'), path.join(out, 'LICENSE-port.txt'));
 // A fresh copy has no settings, data or temp yet; make sure none slipped in.
 for (const name of ['settings.json', 'data', 'temp', 'selftest_result.txt']) fs.rmSync(path.join(out, name), { recursive: true, force: true });
