@@ -28384,7 +28384,7 @@ new file mode 100644
 index 0000000..016a565
 --- /dev/null
 +++ b/runtime/src/hle/punchout_ap_game.cpp
-@@ -0,0 +1,664 @@
+@@ -0,0 +1,670 @@
 +// Punch-Out!! Archipelago: the game side of the Punch-Out Wii apworld's Riivolution patch (its dol_patch.py),
 +// done as native hooks. On Dolphin that patch writes PowerPC code into the game; here code written into memory
 +// never runs, so each piece is a wrapper around the game function it hooked. The patch's data (flags, counters,
@@ -28648,6 +28648,12 @@ index 0000000..016a565
 +    if (index >= 8) return;
 +    const uint32_t slot = manager + 8 + index * 0xC48u;
 +    if (!In(slot, 0xC48)) return;
++    // Only a profile that exists. A slot that was never used or was deleted has no creation time (slot + 0xBD8..0xBDF, eight
++    // bytes), yet the manager keeps its old index while the Profile Select screen is up. Writing there would leave the
++    // unlock behind in the empty slot, and the next new profile made in it would start with everything open.
++    uint32_t created = 0;
++    for (uint32_t i = 0; i < 8; ++i) created |= R8(slot + 0xBD8 + i);
++    if (created == 0) return;
 +    const uint32_t before = R8(slot + 3);
 +    if (before < 26) {
 +        W8(slot + 3, 26);
