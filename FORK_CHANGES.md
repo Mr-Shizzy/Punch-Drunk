@@ -14,6 +14,13 @@ You bring your own copies of the games. No game files are included.
 - **Builds work on external drives** that don't keep file owners (such as exFAT SSDs).
 - **The Visual C++ runtime is included**, so nothing needs installing first. If Windows has a newer copy, that one is used.
 
+## Linux and Steam Deck (experimental)
+
+- **Linux:** `Punch-Drunk.AppImage`. The build needs some packages first (the README has the exact line).
+- **Steam Deck:** `Punch-Drunk-SteamDeck.AppImage`. It carries its own build tools, so nothing needs installing. Run it in Desktop Mode.
+- Both keep everything beside the AppImage, like the Windows version.
+- Only tested in WSL (Ubuntu 24.04 on Windows): the launcher starts and Punch-Out!! builds from a disc and runs. Nobody has played on a real Linux PC or Steam Deck yet.
+
 ## Fully portable
 
 - It's a zip: unzip it and run it. There is no installer.
@@ -27,7 +34,7 @@ You bring your own copies of the games. No game files are included.
 - **Anti-aliasing** setting: Off or 4×.
 - **Clearer resolution labels:** each choice shows its pixel height (Native 480p, 720p, 960p, 1440p, 1920p, 2880p, 3840p), plus a line spelling out the exact size.
 - **Lock aspect ratio is on by default** for new setups. On larger or wider monitors the picture keeps its aspect ratio, with black bars on each side, instead of stretching. You can turn it off in Settings. (It doesn't add extra scenery on the sides.)
-- **Cheats** for Punch-Out!! (Settings > Cheats, all off by default): Invincible Little Mac, Unlimited stars, Unlock all fighters, and Unlock the gallery (all the music and the movies; it finishes your career and marks every challenge done). They switch themselves off while Archipelago is on. The two unlock cheats change your save for good, so the launcher makes a backup copy first.
+- **Cheats** for Punch-Out!! (Settings > Cheats, all off by default): Invincible Little Mac, Unlimited stars, Unlock all fighters, and Unlock the gallery (all the music and the movies; it finishes your career and marks every challenge done). They switch themselves off while Archipelago is on. The two unlock cheats change your save for good, so the launcher makes a backup copy first. They only touch a profile that exists, so deleting a profile while a cheat is on does not leave an unlock behind for the next new profile.
 - **Archipelago** now has a short explanation in Settings. It's optional and only for people joining a randomizer group.
 
 ## Look
@@ -44,4 +51,4 @@ You bring your own copies of the games. No game files are included.
 
 ## What has been tested
 
-All of the above works on the author's own Windows PC. Not tested: other graphics cards, other Windows versions, and the Linux/Steam Deck builds of the launcher.
+All of the above works on the author's own Windows PC. Not tested: other graphics cards, other Windows versions, and playing on a real Linux PC or Steam Deck (those were only run in WSL).
