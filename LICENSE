@@ -2,8 +2,7 @@ MIT License
 
 Copyright (c) 2026 POW: Recompiled!! contributors
 Copyright (c) 2026 Mr-Shizzy (Punch-Drunk changes)
-Portions (src/gamepad-nav.js, and the launcher's overall design) from SMS Launcher,
-Copyright (c) 2026 Chase Myers, https://github.com/chasem-dev/sms-launcher
+Copyright (c) 2026 Chase Myers
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +21,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Third-party files: src/assets/glyphs (UI Elements by Arks, CC BY 4.0, see src/assets/glyphs/CREDITS.txt).
-
-The port/ folder is licensed separately, under the GPL-3.0 (see port/LICENSE).
