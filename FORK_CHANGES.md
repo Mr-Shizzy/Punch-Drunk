@@ -10,9 +10,11 @@ You bring your own copies of the games. No game files are included.
   - It needs the Wii common key from your own console (the `keys.bin` from a BootMii backup, or the key pasted in). The launcher uses it once and never saves it.
 - **Punch-Out!! installs from your own disc image**, the same two-step setup.
 - **One launcher for both games.** Set up, play and settings are all in one program.
+- **Update check.** The launcher looks for a newer release on GitHub (at most once a day; off switch in Settings; nothing about you is sent). On Windows, **Update now** downloads it, checks it against the release's SHA-256, swaps the program's files (never your data or settings), restarts, rebuilds the games the new version changes, and cleans up. If anything goes wrong the old files are put back. **Remind me later** hides it for three days. Linux and Steam Deck show the notice with a link to the download page.
 - **"Update game" button.** When a newer version of the game is waiting, the card's button says so. One click rebuilds it.
 - **Builds work on external drives** that don't keep file owners (such as exFAT SSDs).
-- **The Visual C++ runtime is included**, so nothing needs installing first. If Windows has a newer copy, that one is used.
+- **Setup works without internet on Windows.** The build tools, the source and the translator (already built) all come in the download, and the build files are removed again after each build.
+- **Microsoft's Visual C++ runtime** isn't included (Microsoft's license doesn't allow that). Most PCs already have it. If yours doesn't, the launcher downloads Microsoft's own installer and runs it, and Windows asks for permission once.
 
 ## Linux and Steam Deck (experimental)
 

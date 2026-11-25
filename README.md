@@ -33,6 +33,8 @@ unpack the WAD and never saved.
 - **Portable.** No installer, everything stays in one folder.
 - **Easier setup.** One launcher for both games, no emulator needed for Doc Louis's.
 - **Works on external drives**, including exFAT SSDs.
+- **Windows setup needs no internet**, and the build files are removed again afterwards.
+- **Updates when you say so.** The launcher checks GitHub for a newer version (switch it off in Settings) and offers **Update now** or **Remind me later**. Your games, saves and settings stay put. On Linux and Steam Deck it just links the download page.
 - **Cheats** (off by default): invincible, unlimited stars, unlock all fighters, unlock the gallery.
 
 The full list is in [FORK_CHANGES.md](FORK_CHANGES.md).

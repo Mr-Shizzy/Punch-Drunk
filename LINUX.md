@@ -6,6 +6,10 @@ Doc Louis's hasn't been built on Linux. Please report what happens.
 Both AppImages keep everything beside themselves, so give each its own folder and make it executable
 (`chmod +x Punch-Drunk.AppImage`).
 
+Unlike the Windows version, the first build needs internet: it downloads WiiCompiled and its libraries while building
+(the Windows download carries them). The build files are removed again afterwards. The update notice is only a link to
+the download page; replace the AppImage by hand.
+
 ## Steam Deck
 
 Use `Punch-Drunk-SteamDeck.AppImage` in Desktop Mode. It carries its own build tools, so nothing needs installing.
