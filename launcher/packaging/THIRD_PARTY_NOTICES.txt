@@ -1,36 +1,73 @@
 Punch-Drunk: Punch-Out (Wii) Recomp - third-party notices
 ==========================================================
 
+Punch-Drunk's own code
+----------------------
+
+Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
+The launcher is MIT: LICENSE.txt. The port files (the changes to WiiCompiled) are GPL-3.0: LICENSE-port.txt.
+
 Shipped in this folder
 ----------------------
 
 Electron (MIT) and Chromium (various open-source licences)
   The launcher runs on Electron. Licence texts: LICENSE.electron.txt and LICENSES.chromium.html.
 
-Microsoft Visual C++ runtime (resources\vcruntime: vcruntime140.dll, vcruntime140_1.dll,
-msvcp140.dll, msvcp140_atomic_wait.dll)
-  Copyright (c) Microsoft Corporation. Redistributable files from Microsoft's Visual C++
-  redistributable, unmodified and signed by Microsoft, shipped app-local for the game's graphics
-  libraries under the redistribution terms of Microsoft Visual Studio. Nothing is installed into
-  Windows: the launcher copies them beside the game only when Windows' own copy is missing or older.
-  resources\vcruntime\VERSION.json says which version this is.
-
-Punch-Drunk launcher (MIT) and the port files (GPL-3.0)
-  Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
-  The launcher is MIT: LICENSE.txt. The port files (the changes to WiiCompiled) are GPL-3.0:
-  LICENSE-port.txt.
-
 Controller button glyphs: UI Elements by Arks (@ScissorMarks), CC BY 4.0 (https://arks.itch.io).
 
-Downloaded on your PC during the first build (not shipped)
-----------------------------------------------------------
+Not included
+------------
 
-Each is fetched from its publisher and checked against a pinned checksum or the publisher's own.
-  WiiCompiled (GPL-3.0)          https://github.com/patchzyy/wiicompiled
-  nod / nodtool (MIT/Apache-2.0) https://github.com/encounter/nod
-  MinGit (GPL-2.0)               https://github.com/git-for-windows/git
-  .NET 8 SDK (MIT)               https://dotnet.microsoft.com
-  llvm-mingw, CMake, Ninja and the game's libraries, from WiiCompiled's own pinned list.
+Microsoft's Visual C++ runtime and the .NET SDK are Microsoft's, and their licences don't allow anyone
+else to hand them out, so this download contains neither. If Windows lacks the Visual C++ runtime the
+game's graphics libraries need, the launcher downloads Microsoft's own installer from Microsoft
+(https://aka.ms/vc14/vc_redist.x64.exe), checks Microsoft's signature on it and runs it with Windows'
+permission prompt. The translator below carries the .NET runtime it needs inside it (MIT).
+
+The build kit (resources\buildkit)
+----------------------------------
+
+Everything the first build needs, so setup works without internet. Each file is the publisher's own
+download, unmodified and checked against a pinned checksum (resources\buildkit\manifest.json lists them).
+The launcher unpacks what it needs into the data folder during a build and removes it afterwards.
+Each archive carries its own licence text inside it, except the ones marked [licenses\], whose texts are
+in resources\buildkit\licenses.
+
+  WiiCompiled 0d5c402 (wiicompiled-0d5c402.zip)   GPL-3.0     https://github.com/patchzyy/wiicompiled
+      The zip is the complete source. LICENSE is inside it.
+  Aurora (inside that zip, aurora-main\)          MIT         https://github.com/patchzyy/aurora-wiicompiled
+  MinGit 2.53.0 (tools\)                          GPL-2.0, plus the licences of the programs it
+                                                  includes (LICENSE.txt inside the zip)
+      Source code: https://github.com/git-for-windows/git (tag v2.53.0.windows.1) and the MSYS2
+      packages it names. For three years from the date of this release, a copy of the corresponding
+      source is also available on request: open an issue at https://github.com/Mr-Shizzy/Punch-Drunk.
+  Translator (translator.zip)                     GPL-3.0 (WiiCompiled's translator source plus the port's
+                                                  changes: the source is wiicompiled-0d5c402.zip and
+                                                  port-source\punchout_region.patch)
+      Built when this download was made. Self-contained: it holds the .NET 8 runtime (MIT, (c) .NET
+      Foundation and Contributors), YamlDotNet 15.1.2 (MIT) and Tomlyn 2.10.1 (BSD-2-Clause); their
+      licence texts are in the zip's licenses folder, and Tomlyn's in resources\buildkit\licenses.
+  nodtool v2.0.0-alpha.10 (tools\)                MIT or Apache-2.0   https://github.com/encounter/nod   [licenses\]
+  llvm-mingw 20260616 (downloads\)                Apache-2.0 with LLVM exceptions, mingw-w64 and others
+                                                  (LICENSE.TXT and the share folders inside the zip)
+  CMake 4.3.3 (downloads\)                        BSD-3-Clause and the licences of its bundled libraries
+                                                  (doc\cmake inside the zip)
+  Ninja 1.13.2 (downloads\)                       Apache-2.0   [licenses\]
+  SDL 3.4.10                                      zlib
+  abseil-cpp 20240722.0                           Apache-2.0
+  Dawn (prebuilt, v20260807.225922)               BSD-3-Clause (Copyright The Dawn & Tint Authors)   [licenses\]
+  {fmt} 12.1.0                                    MIT
+  FreeType 2.14.3                                 FreeType License or GPL-2.0
+  Dear ImGui 1.91.9b                              MIT
+  libpng 1.6.58                                   PNG Reference Library License v2
+  libusb 1.0.30                                   LGPL-2.1 (the unmodified source is the archive)
+  Mbed TLS 3.6.7                                  Apache-2.0 or GPL-2.0-or-later
+  SQLite 3.51.3                                   Public domain
+  Tracy 0.14.1                                    BSD-3-Clause
+  xxHash 0.8.4                                    BSD-2-Clause (the library; its command-line tool is GPL-2.0)
+  zlib-ng 2.3.3                                   zlib
+  Zstandard 1.5.7                                 BSD-3-Clause or GPL-2.0
+  Microsoft.Windows.CppWinRT 3.0.260818.1         MIT
 
 Punch-Out!! and Doc Louis's Punch-Out!! are (c) Nintendo. Not affiliated with or endorsed by
 Nintendo. No game code or data is included.

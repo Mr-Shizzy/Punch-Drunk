@@ -143,6 +143,15 @@ input:disabled { opacity: .5; }
 pre { background: var(--bg); padding: 9px 11px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
 
 /* Progress strip, above the status bar */
+.update-bar { display: flex; align-items: center; gap: 14px; padding: 10px 24px; border-top: 1px solid var(--gold); background: var(--surface); font-size: 13px; }
+.update-bar[hidden] { display: none; }
+.update-bar button { white-space: nowrap; flex: none; }
+.update-text { flex: 1; min-width: 0; }
+.update-bar .spacer { display: none; }
+.update-bar.failed { border-top-color: var(--red); }
+.update-bar.failed #update-sub { color: var(--text); }
+.update-bar button.primary { padding: 6px 18px; font-size: 13px; }
+.update-bar button.secondary { padding: 6px 14px; font-size: 13px; }
 .progress { padding: 12px 24px; border-top: 1px solid var(--line); background: var(--surface); }
 .progress-text { display: flex; gap: 10px; font-size: 13px; }
 #progress-title { font-weight: 600; }

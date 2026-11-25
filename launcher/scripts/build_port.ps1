@@ -9,7 +9,9 @@
 #              one between the games)
 #   PO_SEED    optional: another game's WiiCompiled clone, copied instead of downloading it again
 #   PO_GIT     git.exe (the launcher's portable MinGit)
-#   PO_DOTNET  dotnet.exe (the launcher's portable .NET SDK)
+#   PO_KIT_TRANSLATOR  the pre-built translator (translator.zip from the launcher's build kit, built from this patch);
+#              without it the translator is built here
+#   PO_DOTNET  dotnet.exe (a .NET SDK; only needed when there is no PO_KIT_TRANSLATOR)
 # Prints "@@STEP n/8 description" between steps (the launcher's progress bar) and ninja's "[n/total]". The compiler,
 # CMake, Ninja and the renderer's libraries come from WiiCompiled's own pinned Windows scripts
 # (Launcher\Prepare-PortableTools.ps1, Prepare-Dependencies.ps1, NativeBuildFlags.ps1): the same toolchain and
@@ -37,7 +39,12 @@ function Need([string]$Name) {
 }
 
 $Src = Need 'PO_SRC'; $Work = Need 'PO_WORK'; $Data = Need 'PO_DATA'; $Port = Need 'PO_PORT'
-$GitExe = Need 'PO_GIT'; $DotnetExe = Need 'PO_DOTNET'
+$GitExe = Need 'PO_GIT'
+# The translator comes built inside the launcher's download (PO_KIT_TRANSLATOR, made from this very patch); only without it
+# is a .NET SDK (PO_DOTNET) needed, to build the translator here.
+$KitTranslator = $env:PO_KIT_TRANSLATOR
+if ($KitTranslator -and -not (Test-Path -LiteralPath $KitTranslator -PathType Leaf)) { Fail "the pre-built translator is missing ($KitTranslator)" }
+$DotnetExe = if ($KitTranslator) { $null } else { Need 'PO_DOTNET' }
 # (PowerShell names are case-insensitive: $GameExe, not $Bin, which the toolchain's $bin below would overwrite.)
 $Game = if ($env:PO_GAME) { $env:PO_GAME } else { 'punchout' }
 switch ($Game) {
@@ -63,7 +70,7 @@ $env:GIT_CONFIG_NOSYSTEM = '1'
 $GitFlags = @('-c', 'core.autocrlf=false', '-c', 'core.longpaths=true', '-c', 'advice.detachedHead=false', '-c', 'safe.directory=*')
 function Git([string[]]$Arguments, [string]$What) { Run $GitExe ($GitFlags + $Arguments) $What }
 
-$env:DOTNET_ROOT = Split-Path -Parent $DotnetExe
+if ($DotnetExe) { $env:DOTNET_ROOT = Split-Path -Parent $DotnetExe }
 $env:DOTNET_MULTILEVEL_LOOKUP = '0'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
@@ -72,6 +79,30 @@ $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
 # ---------------------------------------------------------------------------------------------------------------
 Step 1 'Getting WiiCompiled'
 $Seed = $env:PO_SEED
+# The build kit inside the launcher's download (PO_BUNDLE): WiiCompiled and Aurora at the pinned commit, so no internet is
+# needed (a copy without the kit takes them from GitHub, below).
+$Bundle = $env:PO_BUNDLE
+$KitSource = $null
+if ($Bundle -and (Test-Path -LiteralPath $Bundle -PathType Container)) {
+    $KitSource = Get-ChildItem -LiteralPath $Bundle -Filter "wiicompiled-$BaseCommit*.zip" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+}
+if ($KitSource) {
+    $manifestFile = Join-Path $Bundle 'manifest.json'
+    if (Test-Path -LiteralPath $manifestFile -PathType Leaf) {
+        $want = (Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json).source.sha256
+        $got = (Get-FileHash -LiteralPath $KitSource.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($want -and $got -ne $want) { Fail 'the WiiCompiled source inside this download is damaged. Download the program again' }
+    }
+    # Always unpacked fresh, so the build starts from exactly the pinned files.
+    if (Test-Path -LiteralPath $WC) { Remove-Item -LiteralPath $WC -Recurse -Force }
+    [IO.Directory]::CreateDirectory($WC) | Out-Null
+    Run (Join-Path ($env:SystemRoot) 'System32\tar.exe') @('-xf', $KitSource.FullName, '-C', $WC) 'could not unpack the WiiCompiled source'
+    # A repository again (one local commit of the pinned files, with the author given on the command line only), so the
+    # steps below work the same as on a clone.
+    Git @('-C', $WC, 'init', '-q') 'git init failed'
+    Git @('-C', $WC, '-c', 'core.safecrlf=false', 'add', '-A') 'git add failed'   # (no "LF will be replaced" warning per file)
+    Git @('-C', $WC, '-c', 'user.name=Punch-Drunk', '-c', 'user.email=build@localhost', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'pinned source') 'git commit failed'
+} else {
 if (-not (Test-Path -LiteralPath (Join-Path $WC '.git')) -and $Seed -and (Test-Path -LiteralPath (Join-Path $Seed '.git')) -and
     (Test-Path -LiteralPath (Join-Path $Seed 'aurora-main'))) {
     # The other game's clone, copied locally (no download); git refuses local submodule sources unless allowed.
@@ -87,6 +118,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $WC '.git'))) {
 & $GitExe @GitFlags -C $WC fetch -q origin
 Git @('-C', $WC, 'reset', '-q', '--hard', $BaseCommit) "could not reset WiiCompiled to $BaseCommit"
 Git @('-c', 'protocol.file.allow=always', '-C', $WC, 'submodule', 'update', '--init', '--recursive', '--force') 'submodule update failed'
+}
 
 # ---------------------------------------------------------------------------------------------------------------
 Step 2 'Applying the POW: Recompiled!! changes'
@@ -122,6 +154,13 @@ $launcherScripts = Join-Path $WC 'Launcher'
 $deps = Join-Path $WC 'Dependencies'
 $downloads = Join-Path $launcherScripts 'artifacts\downloads'
 [IO.Directory]::CreateDirectory($downloads) | Out-Null
+# The compiler, CMake, Ninja and the library archives from the build kit go into WiiCompiled's download cache; its own
+# scripts check each against its pinned checksum and download only what is missing or wrong.
+$kitDownloads = if ($Bundle) { Join-Path $Bundle 'downloads' } else { $null }
+if ($kitDownloads -and (Test-Path -LiteralPath $kitDownloads -PathType Container)) {
+    Say 'Taking the compiler and libraries from this download...'
+    Copy-Item -Path (Join-Path $kitDownloads '*') -Destination $downloads -Force
+}
 try {
     & (Join-Path $launcherScripts 'Prepare-PortableTools.ps1') -Destination $Toolchain
 } catch {
@@ -205,16 +244,32 @@ $project = Join-Path $WS "projects\$Game\recomp.yml"
 $gen = Join-Path $WS 'generated'
 
 # ---------------------------------------------------------------------------------------------------------------
-Step 4 'Building the translator'
-# Portable: no build servers left running afterwards, and NuGet reads the launcher's own config (PO_NUGET_CONFIG)
-# instead of creating one in AppData.
-$dotnetBuild = @('build', (Join-Path $WS 'translator\src\Translator.Cli\Translator.Cli.csproj'), '-c', 'Release', '-v', 'quiet',
-    '--disable-build-servers', '-nodeReuse:false', '-p:UseSharedCompilation=false')
-if ($env:PO_NUGET_CONFIG) { $dotnetBuild += "-p:RestoreConfigFile=$($env:PO_NUGET_CONFIG)" }
-Run $DotnetExe $dotnetBuild 'translator build failed'
-$dll = Join-Path $WS 'translator\src\Translator.Cli\bin\Release\net8.0\Translator.Cli.dll'
-if (-not (Test-Path -LiteralPath $dll -PathType Leaf)) { Fail "the translator wasn't built ($dll)" }
-function Xlate([string[]]$Arguments, [string]$What) { Run $DotnetExe (@($dll) + $Arguments) $What }
+if ($KitTranslator) {
+    Step 4 'Unpacking the translator'
+    # Built in advance from WiiCompiled's translator source plus this patch (self-contained: it carries its own .NET runtime).
+    $manifestFile = Join-Path $Bundle 'manifest.json'
+    $want = if (Test-Path -LiteralPath $manifestFile -PathType Leaf) { (Get-Content -LiteralPath $manifestFile -Raw | ConvertFrom-Json).translator.sha256 } else { $null }
+    $got = (Get-FileHash -LiteralPath $KitTranslator -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (-not $want -or $got -ne $want) { Fail 'the translator inside this download is damaged. Download the program again' }
+    $translatorDir = Join-Path $WS 'translator-bin'
+    if (Test-Path -LiteralPath $translatorDir) { Remove-Item -LiteralPath $translatorDir -Recurse -Force }
+    [IO.Directory]::CreateDirectory($translatorDir) | Out-Null
+    Run (Join-Path ($env:SystemRoot) 'System32\tar.exe') @('-xf', $KitTranslator, '-C', $translatorDir) 'could not unpack the translator'
+    $translatorExe = Join-Path $translatorDir 'Translator.Cli.exe'
+    if (-not (Test-Path -LiteralPath $translatorExe -PathType Leaf)) { Fail "the translator is missing ($translatorExe)" }
+    function Xlate([string[]]$Arguments, [string]$What) { Run $translatorExe $Arguments $What }
+} else {
+    Step 4 'Building the translator'
+    # Portable: no build servers left running afterwards, and NuGet reads the launcher's own config (PO_NUGET_CONFIG)
+    # instead of creating one in AppData.
+    $dotnetBuild = @('build', (Join-Path $WS 'translator\src\Translator.Cli\Translator.Cli.csproj'), '-c', 'Release', '-v', 'quiet',
+        '--disable-build-servers', '-nodeReuse:false', '-p:UseSharedCompilation=false')
+    if ($env:PO_NUGET_CONFIG) { $dotnetBuild += "-p:RestoreConfigFile=$($env:PO_NUGET_CONFIG)" }
+    Run $DotnetExe $dotnetBuild 'translator build failed'
+    $dll = Join-Path $WS 'translator\src\Translator.Cli\bin\Release\net8.0\Translator.Cli.dll'
+    if (-not (Test-Path -LiteralPath $dll -PathType Leaf)) { Fail "the translator wasn't built ($dll)" }
+    function Xlate([string[]]$Arguments, [string]$What) { Run $DotnetExe (@($dll) + $Arguments) $What }
+}
 
 Push-Location $WS
 try {

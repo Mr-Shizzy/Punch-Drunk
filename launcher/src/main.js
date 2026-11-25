@@ -18,16 +18,13 @@ const toml = require('./toml-edit');
 const art = require('./art');
 const { pathToFileURL } = require('node:url');
 const wad = require('./wad');
+const updater = require('./updater');
 
 // The one supported disc: Punch-Out!! (USA), its main.dol.
 const GAME_ID = 'R7PE01';
 const MAIN_DOL_MD5 = '1276cd5952e3b4c644925928786b3e20';
-// nodtool (encounter/nod, MIT / Apache-2.0): the same pinned release WiiCompiled's own setup uses.
-const NODTOOL = {
-  version: 'v2.0.0-alpha.10',
-  'linux-x64': { asset: 'nodtool-linux-x86_64', sha256: 'f853b83268b9542faf0d28815bc3a23c090ae28ebf397e46f99cbb08122c8307' },
-  'win32-x64': { asset: 'nodtool-windows-x86_64.exe', sha256: '1e150e33b88157527f96caea89ad12267aed8b117180c9ebaa89ebe89c1d948d' }
-};
+// The pinned tools (nodtool, MinGit, the .NET SDK) and WiiCompiled's commits: src/pins.js.
+const { NODTOOL, MINGIT, DOTNET } = require('./pins');
 // Doc Louis's Punch-Out!! (WiiWare, USA): title 00010001-57504345, and
 // the sha256 of its game code (content 1).
 const DOC_TITLE = ['00010001', '57504345'];
@@ -39,15 +36,28 @@ const GAMES = {
 };
 const IS_WIN = process.platform === 'win32';
 const EXE = IS_WIN ? '.exe' : '';
-// Windows: the launcher brings its own Git (MinGit, pinned) and .NET 8 SDK (the newest 8.0 SDK, checked against
-// Microsoft's own release list) into its tools folder, so players install nothing. The compiler, CMake and Ninja
-// come during the build, from WiiCompiled's own pinned Windows tool list (build_port.ps1 step 3).
-const MINGIT = {
-  version: '2.53.0',
-  url: 'https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/MinGit-2.53.0-64-bit.zip',
-  sha256: '82b562c918ec87b2ef5316ed79bb199e3a25719bb871a0f10294acf21ebd08cd'
-};
-const DOTNET_RELEASES = 'https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json';
+// Windows: the launcher brings its own Git (MinGit), pinned, into its tools folder, so players install nothing. The
+// compiler, CMake and Ninja come during the build, from WiiCompiled's own pinned Windows tool list (build_port.ps1 step 3).
+//
+// The build kit: the Windows download carries everything the build needs (resources\buildkit: Git, nodtool, WiiCompiled's and
+// Aurora's source at the pinned commits, the compiler, CMake, Ninja, every library archive, and the translator already built),
+// each checked against its pin before use. With it the build needs no internet. No .NET SDK is shipped (Microsoft's SDK terms
+// don't allow handing it out): the translator is built at release time. A copy without the kit (development, Linux for now)
+// fetches the same pinned files online, as before, and builds the translator itself with a .NET SDK.
+const buildKitDir = () => [path.join(process.resourcesPath || '', 'buildkit'), path.join(__dirname, '..', 'buildkit')]
+  .find(dir => fs.existsSync(path.join(dir, 'manifest.json'))) || null;
+// The kit's pre-built translator, when it was built from exactly this port's patch (the patch changes the translator's own
+// source, so a different patch, e.g. a custom port folder, needs a fresh build, which needs the .NET SDK).
+function kitTranslator(src = portSource()) {
+  const kit = buildKitDir();
+  if (!kit || !src) return null;
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(kit, 'manifest.json'), 'utf8'));
+    const zip = path.join(kit, 'translator.zip');
+    const patch = crypto.createHash('sha256').update(fs.readFileSync(path.join(src, 'punchout_region.patch'))).digest('hex');
+    return manifest.translator && manifest.translator.patchSha256 === patch && fs.existsSync(zip) ? zip : null;
+  } catch { return null; }
+}
 const TOOLS = [
   { name: 'git', args: ['--version'] },
   { name: 'dotnet', args: ['--list-sdks'], check: out => dotnetSdkOk(out), need: '.NET SDK 8.0.200 or newer' },
@@ -359,31 +369,37 @@ async function hashFile(file, algorithm) {
 }
 async function checkWindowsTools() {
   const t = winTools();
-  let dotnetOk = false;
-  if (fs.existsSync(t.dotnet)) {
-    const r = await run(t.dotnet, ['--list-sdks'], { timeout: 20000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
-    dotnetOk = r.ok && /^8\./m.test(r.stdout);
+  const results = [{ name: 'git', ok: fs.existsSync(t.git), need: 'Git' }];
+  // The translator comes built inside this download; only a port patch it wasn't built for needs the .NET SDK.
+  const prebuilt = !!kitTranslator();
+  if (!prebuilt) {
+    let dotnetOk = false;
+    if (fs.existsSync(t.dotnet)) {
+      const r = await run(t.dotnet, ['--list-sdks'], { timeout: 20000, env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } });
+      dotnetOk = r.ok && /^8\./m.test(r.stdout);
+    }
+    results.push({ name: 'dotnet', ok: dotnetOk, need: '.NET 8 SDK' });
   }
-  const results = [
-    { name: 'git', ok: fs.existsSync(t.git), need: 'Git' },
-    { name: 'dotnet', ok: dotnetOk, need: '.NET 8 SDK' }
-  ];
   const missing = results.filter(r => !r.ok).map(r => r.name);
-  const managedText = 'The first build downloads Git, .NET 8 and the compiler into this folder. Nothing is installed into Windows.';
+  const managedText = prebuilt
+    ? 'The build tools come inside this download. Building unpacks them into this folder, then removes them again. Nothing is installed into Windows.'
+    : 'This port needs a .NET SDK to build, which is fetched from Microsoft into this folder and removed again afterwards. Nothing is installed into Windows.';
   return { ok: missing.length === 0, results, missing, hint: null, managed: true, managedText };
 }
 
-// ---- The Visual C++ runtime, app-local ----
-// The game's graphics DLLs (webgpu_dawn.dll, dxcompiler.dll) need Microsoft's Visual C++ runtime. The launcher ships
-// those DLLs (resources\vcruntime, from Microsoft's redistributable: packaging\fetch_vcruntime.js) instead of
-// installing anything. Before each game starts: if Windows' own copy is missing or older than ours, ours goes beside
-// the game (Windows loads DLLs from the game's folder first); if Windows' is as new or newer, ours is taken away from
-// the game's folder so Windows' is used. Ours always stays in the launcher, so uninstalling Windows' copy later is fine.
+// ---- The Visual C++ runtime ----
+// The game's graphics DLLs (webgpu_dawn.dll, dxcompiler.dll) need Microsoft's Visual C++ runtime. Microsoft's license for it
+// doesn't let anyone else hand those DLLs out, so none come with this program. Before each game starts: if Windows has the
+// runtime at the version the graphics DLLs were built for (or newer), nothing happens. Otherwise the launcher downloads
+// Microsoft's own installer from Microsoft, checks Microsoft's signature on it and runs it; Windows asks for permission once.
+// Only a PC without (or with an older) runtime ever does this.
 const VC_RUNTIME_DLLS = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_atomic_wait.dll'];
-function bundledVcRuntime() {
-  const dirs = [path.join(process.resourcesPath || '', 'vcruntime'), path.join(__dirname, '..', 'vcruntime')];
-  return dirs.find(dir => VC_RUNTIME_DLLS.every(d => fs.existsSync(path.join(dir, d)))) || null;
-}
+const VC_RUNTIME_URL = 'https://aka.ms/vc14/vc_redist.x64.exe';
+// The graphics DLLs were built with Microsoft's 14.51 toolset (their PE headers say so), and a runtime must be at least as new
+// as the toolset that built a program. 14.51.36247.0 is the version the games were tested against.
+const VC_RUNTIME_MIN = (([a, b, c, d]) => a * 2 ** 48 + b * 2 ** 32 + c * 2 ** 16 + d)('14.51.36247.0'.split('.').map(Number));
+const vcRuntimeVersion = dir => Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(dir, d))));
+const systemDir = () => path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
 // A Windows DLL's file version (VS_FIXEDFILEINFO), as a number that sorts correctly; 0 when it can't be read.
 function dllVersion(file) {
   let buf;
@@ -394,23 +410,53 @@ function dllVersion(file) {
   return ((ms >>> 16) * 2 ** 48) + ((ms & 0xFFFF) * 2 ** 32) + ((ls >>> 16) * 2 ** 16) + (ls & 0xFFFF);
 }
 const versionText = v => [Math.floor(v / 2 ** 48), Math.floor(v / 2 ** 32) % 65536, Math.floor(v / 2 ** 16) % 65536, v % 65536].join('.');
-function prepareVcRuntime(portDir) {
+async function ensureVcRuntime(portDir) {
   if (!IS_WIN) return;
-  const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
-  const system = Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(sys32, d))));
-  const bundled = bundledVcRuntime();
-  const ours = bundled ? Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(bundled, d)))) : 0;
-  if (bundled && ours > system) {
-    for (const d of VC_RUNTIME_DLLS) {
-      const target = path.join(portDir, d);
-      if (dllVersion(target) !== dllVersion(path.join(bundled, d))) fs.copyFileSync(path.join(bundled, d), target);
-    }
-    log(`Visual C++ runtime: using the launcher's ${versionText(ours)}${system ? ` (Windows has ${versionText(system)})` : " (Windows doesn't have it)"}.`);
-  } else if (system) {
+  const system = vcRuntimeVersion(systemDir());
+  if (system >= VC_RUNTIME_MIN) {
+    // (An earlier launcher put copies beside the game; Windows' own is new enough, so those go.)
     for (const d of VC_RUNTIME_DLLS) fs.rmSync(path.join(portDir, d), { force: true });
     log(`Visual C++ runtime: using Windows' ${versionText(system)}.`);
-  } else {
-    throw new Error("The game needs Microsoft's Visual C++ runtime, and this copy of the launcher is missing its own. Download the launcher again.");
+    return;
+  }
+  const beside = vcRuntimeVersion(portDir);
+  if (beside >= VC_RUNTIME_MIN) { log(`Visual C++ runtime: using the copy beside the game (${versionText(beside)}).`); return; }
+  log(`Visual C++ runtime: Windows has ${system ? versionText(system) : 'none'}, the game needs ${versionText(VC_RUNTIME_MIN)} or newer. Getting Microsoft's installer.`);
+  await installVcRuntime();
+  const after = vcRuntimeVersion(systemDir());
+  if (after < VC_RUNTIME_MIN) throw new Error(`Microsoft's Visual C++ runtime installer ran, but Windows still has ${after ? versionText(after) : 'no runtime'}. Restart the PC and try again, or install it from ${VC_RUNTIME_URL}.`);
+  log(`Visual C++ runtime: Windows now has ${versionText(after)}.`);
+}
+// Microsoft's installer, straight from Microsoft, run with Windows' permission prompt (it installs into Windows, which
+// needs it). Its Microsoft signature is checked first; nothing else is run.
+async function installVcRuntime() {
+  const help = `Install it yourself from ${VC_RUNTIME_URL}, then press Play again.`;
+  const exe = path.join(RUN_TEMP, 'vc_redist.x64.exe');
+  const quoted = exe.replace(/'/g, "''");
+  const ps = args => run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', args], { timeout: 15 * 60000 });
+  try {
+    setTask({ label: "Getting Microsoft's Visual C++ runtime", detail: 'The game needs it. About 20 MB, once.', percent: null });
+    await fsp.mkdir(RUN_TEMP, { recursive: true });
+    try {
+      await download(VC_RUNTIME_URL, exe, (got, total) => setTask({ label: "Getting Microsoft's Visual C++ runtime", detail: mb(got), percent: percentOf(got, total) }));
+    } catch (err) {
+      throw new Error(`The game needs Microsoft's Visual C++ runtime, and it couldn't be downloaded (${err.message}). ${help}`);
+    }
+    const sig = (await ps(`$s = Get-AuthenticodeSignature -LiteralPath '${quoted}'; "$($s.Status)|$($s.SignerCertificate.Subject)"`)).stdout.trim();
+    if (!/^Valid\|CN=Microsoft [^,|]+, O=Microsoft Corporation, L=Redmond, S=Washington, C=US$/.test(sig)) {
+      throw new Error(`What was downloaded isn't signed by Microsoft (${sig || 'no signature'}), so it was not run. ${help}`);
+    }
+    setTask({ label: "Installing Microsoft's Visual C++ runtime", detail: 'Windows will ask for permission', percent: null });
+    const r = await ps(`$p = Start-Process -FilePath '${quoted}' -ArgumentList '/install','/passive','/norestart' -Verb RunAs -Wait -PassThru; exit $p.ExitCode`);
+    // 0 = installed, 3010 = installed (a restart is advised), 1638 = a newer one is already there.
+    const code = r.ok ? 0 : r.error && typeof r.error.code === 'number' ? r.error.code : -1;
+    if (![0, 3010, 1638, 1641].includes(code)) {
+      const declined = /cancel/i.test(r.stderr);
+      throw new Error(declined ? `The permission prompt was declined, so Microsoft's Visual C++ runtime wasn't installed. ${help}`
+        : `Microsoft's Visual C++ runtime installer didn't finish (code ${code}). ${help}`);
+    }
+  } finally {
+    await fsp.rm(exe, { force: true }).catch(() => {});
   }
 }
 
@@ -428,31 +474,41 @@ async function fetchJson(url) {
   try { await download(url, file); return JSON.parse(await fsp.readFile(file, 'utf8')); } finally { await fsp.rm(file, { force: true }); }
 }
 
+// A pinned file: the build kit's copy if this download has one (checked against the pin), otherwise fetched from its
+// official address and checked the same way. `temporary` says the caller should delete it after use (the kit's copy stays).
+async function pinnedFile({ label, kitName, url, algorithm, hash, dest }) {
+  const kit = buildKitDir();
+  const bundled = kit && path.join(kit, 'tools', kitName);
+  if (bundled && fs.existsSync(bundled)) {
+    setTask({ label: `Checking ${label}`, detail: 'From this download', percent: null });
+    if (await hashFile(bundled, algorithm) !== hash) throw new Error(`${label} inside this download failed its checksum. Download the program again.`);
+    return { file: bundled, temporary: false };
+  }
+  await fsp.mkdir(path.dirname(dest), { recursive: true });
+  await download(url, dest, (got, total) => setTask({ label: `Downloading ${label}`, detail: mb(got), percent: percentOf(got, total) }));
+  if (await hashFile(dest, algorithm) !== hash) { await fsp.rm(dest, { force: true }); throw new Error(`The ${label} download failed its checksum.`); }
+  return { file: dest, temporary: true };
+}
+
 async function installWindowsTools() {
   const p = paths();
   const t = winTools();
   const status = await checkWindowsTools();
   await fsp.mkdir(p.tools, { recursive: true });
   if (!status.results.find(r => r.name === 'git').ok) {
-    const zip = path.join(p.tools, `MinGit-${MINGIT.version}.zip`);
-    await download(MINGIT.url, zip, (got, total) => setTask({ label: 'Downloading Git', detail: mb(got), percent: percentOf(got, total) }));
-    if (await hashFile(zip, 'sha256') !== MINGIT.sha256) { await fsp.rm(zip, { force: true }); throw new Error('The Git download failed its checksum.'); }
+    const zip = await pinnedFile({ label: 'Git', kitName: path.basename(new URL(MINGIT.url).pathname), url: MINGIT.url,
+      algorithm: 'sha256', hash: MINGIT.sha256, dest: path.join(p.tools, `MinGit-${MINGIT.version}.zip`) });
     setTask({ label: 'Unpacking Git', detail: '', percent: null });
-    await unzip(zip, path.join(p.tools, 'git'));
-    await fsp.rm(zip, { force: true });
+    await unzip(zip.file, path.join(p.tools, 'git'));
+    if (zip.temporary) await fsp.rm(zip.file, { force: true });
   }
-  if (!status.results.find(r => r.name === 'dotnet').ok) {
-    setTask({ label: 'Finding the .NET 8 SDK', detail: '', percent: null });
-    const releases = await fetchJson(DOTNET_RELEASES);
-    const file = (releases.releases || []).flatMap(r => (r.sdk && r.sdk.files) || [])
-      .find(f => f.rid === 'win-x64' && /\.zip$/.test(f.name || f.url || ''));
-    if (!file || !/^https:\/\//.test(file.url) || !file.hash) throw new Error("Couldn't find the .NET 8 SDK download.");
-    const zip = path.join(p.tools, 'dotnet-sdk.zip');
-    await download(file.url, zip, (got, total) => setTask({ label: 'Downloading .NET 8', detail: mb(got), percent: percentOf(got, total) }));
-    if (await hashFile(zip, 'sha512') !== String(file.hash).toLowerCase()) { await fsp.rm(zip, { force: true }); throw new Error('The .NET download failed its checksum.'); }
+  const dotnetStatus = status.results.find(r => r.name === 'dotnet');
+  if (dotnetStatus && !dotnetStatus.ok) {   // (only when the kit's translator doesn't fit this port: fetched from Microsoft)
+    const zip = await pinnedFile({ label: '.NET 8', kitName: path.basename(new URL(DOTNET.url).pathname), url: DOTNET.url,
+      algorithm: 'sha512', hash: DOTNET.sha512, dest: path.join(p.tools, 'dotnet-sdk.zip') });
     setTask({ label: 'Unpacking .NET 8', detail: 'About a minute', percent: null });
-    await unzip(zip, t.dotnetDir);
-    await fsp.rm(zip, { force: true });
+    await unzip(zip.file, t.dotnetDir);
+    if (zip.temporary) await fsp.rm(zip.file, { force: true });
   }
   return checkTools(true);
 }
@@ -466,6 +522,15 @@ async function nodtool() {
   if (fs.existsSync(file) && await sha256(file) === entry.sha256) return file;
   await fsp.mkdir(p.tools, { recursive: true });
   setTask({ label: 'Getting the disc tool', detail: 'nodtool ' + NODTOOL.version, percent: null });
+  // This download's build kit has it: no internet needed.
+  const kit = buildKitDir();
+  const bundled = kit && path.join(kit, 'tools', entry.asset);
+  if (bundled && fs.existsSync(bundled)) {
+    if (await sha256(bundled) !== entry.sha256) throw new Error('The disc tool inside this download failed its checksum. Download the program again.');
+    await fsp.copyFile(bundled, file);
+    if (!IS_WIN) await fsp.chmod(file, 0o755);
+    return file;
+  }
   const tmp = file + '.part';
   await download(`https://github.com/encounter/nod/releases/download/${NODTOOL.version}/${entry.asset}`, tmp);
   if (await sha256(tmp) !== entry.sha256) { await fsp.rm(tmp, { force: true }); throw new Error('The downloaded disc tool failed its checksum.'); }
@@ -655,10 +720,13 @@ function buildEnvironment() {
     Object.assign(env, { XDG_CACHE_HOME: path.join(home, '.cache'), XDG_CONFIG_HOME: path.join(home, '.config') });
   }
   for (const dir of [env.TEMP, path.join(home, 'nuget'), env.APPDATA, env.LOCALAPPDATA]) if (dir) fs.mkdirSync(dir, { recursive: true });
-  // Only nuget.org, and NuGet reads this file instead of making one in AppData.
-  if (!fs.existsSync(env.PO_NUGET_CONFIG)) {
-    fs.writeFileSync(env.PO_NUGET_CONFIG, '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <packageSources>\n    <clear />\n    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />\n  </packageSources>\n</configuration>\n');
-  }
+  // One package source, and NuGet reads this file instead of making one in AppData. (Only used when the translator has to be
+  // built here, i.e. without the kit's pre-built one.)
+  fs.writeFileSync(env.PO_NUGET_CONFIG, '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <packageSources>\n    <clear />\n    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />\n  </packageSources>\n</configuration>\n');
+  const kit = buildKitDir();
+  if (kit) env.PO_BUNDLE = kit; // build_port.ps1 takes WiiCompiled's source and the library archives from here
+  const translator = kitTranslator();
+  if (translator) env.PO_KIT_TRANSLATOR = translator; // ...and this translator, built for this port's patch
   return env;
 }
 
@@ -721,6 +789,44 @@ async function build() {
     if (buildLog) buildLog.end();
   }
   await fsp.writeFile(buildInfoFile(game), JSON.stringify({ patch: await portSourceHash(), at: new Date().toISOString(), source: src }, null, 2));
+  await cleanUpAfterBuild();
+}
+
+// A finished build leaves gigabytes nobody needs to play: WiiCompiled's source and build folders, the compiler, Git, .NET
+// and the build tools' caches. Every one of them is made again by the next build, so they are removed (only after a build
+// that worked; after a failed one they stay, which keeps a retry quick and the folders there to look at). The game itself
+// (data\port, data\port-doclouis), the unpacked disc or WAD, the logs and the saves are never touched. A problem here is
+// logged but never fails the build.
+async function cleanUpAfterBuild() {
+  const p = paths();
+  // Only what the launcher itself puts in these folders is removed, by name: the data folder can be any folder the player
+  // chose, so a folder that happens to be called "tools" is never wiped whole.
+  const targets = [
+    [p.work, ['wiicompiled', 'toolchain']],
+    [gamePaths('doclouis').work, ['wiicompiled']],
+    [p.tools, ['git', 'dotnet', 'buildroot', 'dotnet-sdk.zip', /^nodtool-.*/, /^MinGit-.*\.zip(\.part)?$/]],
+    [path.join(p.root, 'build-home'), null] // the launcher's own folder for the build tools' caches and settings
+  ];
+  setTask({ label: 'Cleaning up', detail: 'Removing the build files', percent: null });
+  let removed = 0;
+  const rm = async target => {
+    await fsp.rm(target, { recursive: true, force: true, maxRetries: 6, retryDelay: 500 });
+    removed++;
+  };
+  for (const [dir, names] of targets) {
+    if (!dir || !fs.existsSync(dir)) continue;
+    try {
+      if (!names) { await rm(dir); continue; }
+      for (const entry of await fsp.readdir(dir)) {
+        if (names.some(n => typeof n === 'string' ? n === entry : n.test(entry))) await rm(path.join(dir, entry));
+      }
+      try { await fsp.rmdir(dir); } catch { /* something else is in there: leave the folder */ }
+    } catch (err) {
+      log(`Couldn't clean ${path.basename(dir)}: ${err.message}`);
+    }
+  }
+  toolsCache = null; // the tools are gone now: the next check must look again
+  log(removed ? 'Cleaned up the build files.' : 'No build files to clean up.');
 }
 
 // Linux desktops (GNOME on Wayland in particular) take a window's taskbar icon and name from the desktop entry whose
@@ -751,7 +857,7 @@ async function play() {
   ensureGameConfig(); // Punch-Out!!'s: also where Doc Louis's reads the shared settings
   if (game === 'doclouis') ensureDocConfig();
   else writeGameDesktopEntry(state.binary);
-  prepareVcRuntime(p.port);
+  await ensureVcRuntime(p.port);
   // The unlock cheat rewrites progress: make sure there is a backup of the save before the game starts.
   if (game === 'punchout' && (readGameSettings().cheats.unlockFighters || readGameSettings().cheats.unlockGallery) && !fs.existsSync(path.join(p.port, 'UserData', 'save backups'))) backUpSave();
   gameRunning = true;
@@ -997,8 +1103,174 @@ async function state() {
     running: gameRunning, busy: Boolean(child) && !gameRunning,
     art: artState(),
     task, settings: readGameSettings(), version: app.getVersion(),
+    update: updateState(),
     logs: logLines.slice(-400)
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Updates (the logic is in src/updater.js). Never forced: the player is offered the new version and can keep playing.
+
+let updateInfo = null;       // the newer release found: { version, notes, page, size, asset, sha, manual }
+let updateNote = '';         // a line for Settings: "You're up to date" / why a check or an update failed
+let updateChecking = false;
+let rebuildAfterUpdate = false;
+const REMIND_DAYS = 3;
+const DAY_MS = 86400000;
+const updateDir = () => path.join(PORTABLE_ROOT, 'update');
+const canSelfUpdate = () => IS_WIN && app.isPackaged;
+const autoUpdateCheck = () => config.updateCheck !== false;
+
+// What the window shows: the release, unless the player said "remind me later" for it and that time hasn't passed.
+function updateState() {
+  const r = config.updateRemind;
+  const hidden = updateInfo && r && r.version === updateInfo.version && Date.now() < r.until;
+  return {
+    auto: autoUpdateCheck(), note: updateNote, checking: updateChecking,
+    available: updateInfo && !hidden
+      ? { version: updateInfo.version, notes: updateInfo.notes, page: updateInfo.page, size: updateInfo.size, manual: updateInfo.manual }
+      : null
+  };
+}
+
+async function checkForUpdate(manual) {
+  if (updateChecking) return;
+  updateChecking = true;
+  if (manual) { updateNote = 'Checking…'; send('state-changed'); }
+  const src = updater.source();
+  try {
+    const info = updater.pickRelease(await updater.fetchLatest(src.api, { test: src.test }), { selfUpdate: canSelfUpdate(), test: src.test });
+    config.updateLastCheck = Date.now();
+    const found = info && updater.isNewer(info.version, app.getVersion());
+    // Remembered, so a newer version nobody has acted on yet is looked up again at every start, not once a day.
+    if (found) config.updateFound = info.version; else delete config.updateFound;
+    saveConfig();
+    if (found) {
+      updateInfo = info;
+      updateNote = '';
+      log(`Update check: version ${info.version} is available.`);
+    } else {
+      updateInfo = null;
+      updateNote = manual ? `You're up to date (version ${app.getVersion()}).` : '';
+      log('Update check: up to date.');
+    }
+  } catch (err) {
+    log(`Update check failed: ${err.message}`);
+    updateNote = manual ? `Couldn't check for updates: ${updater.describeError(err)}` : '';
+  } finally {
+    updateChecking = false;
+    send('state-changed');
+  }
+}
+
+function freeBytes(dir) {
+  try { const s = fs.statfsSync(dir); return Number(s.bavail) * Number(s.bsize); } catch { return null; }
+}
+
+// Windows: download the release's zip, check it, unpack it into update\, then hand over to a script that swaps the files
+// after this program closes and starts the new one (see updater.js). Any failure removes the download and says why.
+async function applyUpdate() {
+  const info = updateInfo;
+  if (!info || info.manual || !canSelfUpdate()) throw new Error('This version can only be downloaded from its page.');
+  const src = updater.source();
+  const dir = updateDir();
+  const label = `Updating to ${info.version}`;
+  updateNote = '';
+  // The zip, its unpacked copy and the old files kept aside until the swap is done.
+  const free = freeBytes(PORTABLE_ROOT);
+  if (free !== null && free < info.size * 3) throw new Error(`Not enough room to update: it needs about ${mb(info.size * 3)} free on this drive and has ${mb(free)}.`);
+  await fsp.rm(dir, { recursive: true, force: true });
+  await fsp.mkdir(dir, { recursive: true });
+  try {
+    setTask({ label, detail: 'Starting the download', percent: null });
+    const want = updater.parseSha256(await updater.getText(info.sha.url, { test: src.test }, 4096), info.asset.name);
+    if (!want) throw new Error("The release's checksum file couldn't be read.");
+    const zip = path.join(dir, info.asset.name);
+    await updater.downloadFile(info.asset.url, zip, (got, total) =>
+      setTask({ label, detail: `Downloading ${mb(got)} of ${mb(total || info.size)}`, percent: percentOf(got, total || info.size) }), { test: src.test });
+    setTask({ label, detail: 'Checking the download', percent: null });
+    if (await updater.sha256File(zip) !== want) throw new Error('The downloaded update is damaged (its checksum does not match the release), so it was not installed. Try again.');
+    setTask({ label, detail: 'Unpacking', percent: null });
+    const staging = path.join(dir, 'staging');
+    await unzip(zip, staging);
+    await fsp.rm(zip, { force: true });
+    const folder = path.join(staging, 'Punch-Drunk');
+    const exe = path.basename(process.execPath);
+    for (const part of [exe, path.join('resources', 'app.asar')]) {
+      if (!fs.existsSync(path.join(folder, part))) throw new Error(`The update doesn't look right (${part} is missing), so it was not installed.`);
+    }
+    await fsp.writeFile(path.join(dir, 'apply-update.ps1'), updater.APPLY_SCRIPT);
+    await fsp.writeFile(path.join(dir, 'apply-args.json'), JSON.stringify({ launcherPid: process.pid, root: PORTABLE_ROOT, staging: folder, exe,
+      result: path.join(dir, 'result.json'), from: app.getVersion(), to: info.version }));
+    setTask({ label, detail: 'Restarting to finish the update', percent: 100 });
+    log(`Update: files for ${info.version} are ready; restarting to install them.`);
+    // Started through cmd's "start /b", run from the update folder (so no folder name is on the command line). A PowerShell
+    // started any other way here is killed when this program exits, or never runs at all (tested); this one outlives it.
+    const proc = spawn(process.env.ComSpec || 'cmd.exe',
+      ['/d', '/c', 'start "" /b powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File apply-update.ps1 -ArgsFile apply-args.json'],
+      { cwd: dir, detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true });
+    proc.unref();
+    setTimeout(() => app.quit(), 700);
+  } catch (err) {
+    await fsp.rm(dir, { recursive: true, force: true }).catch(() => {});
+    log(`Update failed: ${err.message}`);
+    // Shown in the update bar (a status-bar message would be replaced by "Ready" straight away).
+    updateNote = `The update wasn't installed: ${updater.describeError(err)} Nothing was changed.`;
+    throw err;
+  }
+}
+
+// At start: what a finished (or failed) update left in update\, then the folder goes. 'busy' = an update is being installed
+// right now (the script starts this program again when it is done).
+function finishUpdate() {
+  const dir = updateDir();
+  if (!fs.existsSync(dir)) return null;
+  // The script's lock holds its process id: only a script that is still running (and not for ages) means "busy". A lock left
+  // by a script that died is just leftovers.
+  try {
+    const lock = path.join(dir, 'applying.lock');
+    const pid = Number(fs.readFileSync(lock, 'utf8').trim());
+    let alive = false;
+    try { process.kill(pid, 0); alive = true; } catch (err) { alive = err.code === 'EPERM'; }
+    if (alive && Date.now() - fs.statSync(lock).mtimeMs < 10 * 60000) return 'busy';
+  } catch { /* no lock */ }
+  let result = null;
+  try { result = JSON.parse(fs.readFileSync(path.join(dir, 'result.json'), 'utf8').replace(/^﻿/, '')); } catch { /* none: an update that never got that far */ }
+  if (result && result.ok) {
+    log(`Updated from version ${result.from} to ${result.to}.`);
+    updateNote = `Updated to version ${result.to}.`;
+    rebuildAfterUpdate = true;
+  } else if (result) {
+    log(`The update to ${result.to} didn't finish: ${result.error}`);
+    updateNote = `The update to ${result.to} didn't finish (${result.error}). You are still on version ${app.getVersion()}.`;
+  }
+  else if (!result && fs.existsSync(path.join(dir, 'apply-update.ps1'))) {
+    // The script was started but never reported: it died before finishing. (Nothing was swapped if it never got that far.)
+    log('A previous update did not finish.');
+    updateNote = `The last update didn't finish. You are still on version ${app.getVersion()}.`;
+  }
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* next start */ }
+  return null;
+}
+
+// After an update, a game the new version builds differently is rebuilt, one at a time, then everything is back to Play.
+async function rebuildOutdatedGames() {
+  const selected = config.game;
+  try {
+    for (const game of Object.keys(GAMES)) {
+      const b = await buildState(game);
+      if (!(b.built && b.outdated)) continue;
+      config.game = game; // (not saved)
+      log(`Updating ${GAMES[game].name} for the new version.`);
+      await exclusive(build)();
+    }
+  } catch (err) {
+    log(`Rebuilding after the update failed: ${err.message}`);
+    updateNote = `Rebuilding after the update didn't finish: ${err.message} Press "Update game" to try again.`;
+  } finally {
+    config.game = selected;
+    send('state-changed');
+  }
 }
 
 function exclusive(fn) {
@@ -1118,6 +1390,13 @@ function registerHandlers() {
     fs.mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
   });
+  ipcMain.handle('update-check', async () => { await checkForUpdate(true); return state(); });
+  ipcMain.handle('update-now', exclusive(applyUpdate));
+  ipcMain.handle('update-later', () => {
+    if (updateInfo) { config.updateRemind = { version: updateInfo.version, until: Date.now() + REMIND_DAYS * DAY_MS }; saveConfig(); }
+    return state();
+  });
+  ipcMain.handle('update-set-auto', (_e, on) => { config.updateCheck = Boolean(on); saveConfig(); return state(); });
   ipcMain.handle('open-external', (_e, url) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
   });
@@ -1175,14 +1454,36 @@ async function selfTest() {
     if (!src) throw new Error('punchout_region.patch not found');
     for (const game of Object.keys(GAMES)) if (!fs.existsSync(path.join(src, 'projects', game, 'MAP.txt'))) throw new Error(`projects/${game} missing`);
   });
-  if (IS_WIN && app.isPackaged) {
-    await check('Visual C++ runtime (bundled)', () => {
-      const dir = bundledVcRuntime();
-      if (!dir) throw new Error('resources\\vcruntime is missing or incomplete');
-      return versionText(Math.min(...VC_RUNTIME_DLLS.map(d => dllVersion(path.join(dir, d)))));
+  if (IS_WIN) {
+    // Not a failure either way: a PC without the runtime gets Microsoft's installer when Play is pressed.
+    await check('Visual C++ runtime', () => {
+      const v = vcRuntimeVersion(systemDir());
+      return v >= VC_RUNTIME_MIN ? `Windows has ${versionText(v)}` : `Windows has ${v ? versionText(v) : 'none'}; Microsoft's installer is fetched when Play is pressed`;
     });
   }
   await check('build script', () => { if (!fs.existsSync(buildScript())) throw new Error(`${path.basename(buildScript())} missing`); });
+  if (IS_WIN && app.isPackaged) {
+    // The Windows download carries its build kit: every file in its manifest has to be there at its full size.
+    await check('build kit (bundled build tools and source)', () => {
+      const kit = buildKitDir();
+      if (!kit) throw new Error('resources\\buildkit is missing');
+      const manifest = JSON.parse(fs.readFileSync(path.join(kit, 'manifest.json'), 'utf8'));
+      let bytes = 0;
+      for (const f of manifest.files) {
+        const file = path.join(kit, ...f.path.split('/'));
+        let size = -1;
+        try { size = fs.statSync(file).size; } catch { /* missing */ }
+        if (size !== f.size) throw new Error(`${f.path} is ${size < 0 ? 'missing' : 'damaged'}`);
+        bytes += size;
+      }
+      return `${manifest.files.length} files, ${mb(bytes)}`;
+    });
+    // The translator in the kit must have been built from the very patch this download ships.
+    await check('pre-built translator matches the port patch', () => {
+      if (!kitTranslator()) throw new Error('translator.zip is missing, or was built for a different punchout_region.patch');
+      return 'yes';
+    });
+  }
   await check('WAD unpacker', async () => {
     const key = crypto.randomBytes(16);
     const contents = [{ id: 0, data: crypto.randomBytes(5000) }, { id: 1, data: crypto.randomBytes(40000) }];
@@ -1270,8 +1571,18 @@ if (process.argv.includes('--build')) {
   app.whenReady().then(() => {
     sweepTemp();
     loadConfig();
+    if (finishUpdate() === 'busy') { app.quit(); return; } // an update is being installed; it starts this program again
     registerHandlers();
     createWindow();
+    win.webContents.once('did-finish-load', () => {
+      // After an update: rebuild what the new version changes. Otherwise (at most once a day, unless switched off in
+      // Settings): look for a newer release. Development copies only check when pointed at a test server.
+      if (rebuildAfterUpdate) { setTimeout(rebuildOutdatedGames, 1500); return; }
+      const due = Date.now() - (config.updateLastCheck || 0) > 20 * 3600 * 1000 || updater.isNewer(config.updateFound, app.getVersion());
+      if (autoUpdateCheck() && due && (app.isPackaged || process.env.PUNCHDRUNK_UPDATE_API)) {
+        setTimeout(() => checkForUpdate(false), process.env.PUNCHDRUNK_UPDATE_API ? 300 : 5000); // (the test server answers fast)
+      }
+    });
   });
   app.on('window-all-closed', () => { stopChild(); app.quit(); });
   app.on('will-quit', removeRunTemp);

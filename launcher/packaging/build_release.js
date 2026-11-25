@@ -31,10 +31,11 @@ const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 if (process.platform !== 'win32') { console.error('Build the Windows release on Windows.'); process.exit(1); }
 
 step('Tests');
-run(process.execPath, ['--test', 'test/wad.test.js']);
+run(process.execPath, ['--test', 'test/wad.test.js', 'test/updater.test.js']);
 
-step('Microsoft Visual C++ runtime (shipped beside the game, nothing installed)');
-run(process.execPath, [path.join(__dirname, 'fetch_vcruntime.js')]);
+step('Build kit (the tools, source and pre-built translator the build needs, so setup works without internet)');
+run(process.execPath, [path.join(__dirname, 'fetch_buildkit.js')]);
+if (!fs.existsSync(path.join(LAUNCHER, 'buildkit', 'manifest.json'))) throw new Error('The build kit is missing');
 
 step('Building the app');
 fs.rmSync(DIST, { recursive: true, force: true });
@@ -47,7 +48,13 @@ fs.mkdirSync(RELEASE, { recursive: true });
 fs.cpSync(UNPACKED, out, { recursive: true });
 fs.copyFileSync(path.join(__dirname, 'README.txt'), path.join(out, 'README.txt'));
 fs.copyFileSync(path.join(__dirname, 'THIRD_PARTY_NOTICES.txt'), path.join(out, 'THIRD_PARTY_NOTICES.txt'));
-if (!fs.existsSync(path.join(out, 'resources', 'vcruntime', 'vcruntime140.dll'))) throw new Error('The Visual C++ runtime is missing from the build');
+if (!fs.existsSync(path.join(out, 'resources', 'buildkit', 'manifest.json'))) throw new Error('The build kit is missing from the build');
+// Nothing of Microsoft's that its licences don't let us hand out: no Visual C++ runtime DLLs, no .NET SDK.
+if (fs.existsSync(path.join(out, 'resources', 'vcruntime'))) throw new Error('resources\\vcruntime must not be in the download');
+for (const name of fs.readdirSync(path.join(out, 'resources', 'buildkit', 'tools'))) {
+  if (/dotnet/i.test(name)) throw new Error(`${name} (the .NET SDK) must not be in the download`);
+}
+if (!fs.existsSync(path.join(out, 'resources', 'buildkit', 'translator.zip'))) throw new Error('The pre-built translator is missing from the build');
 fs.copyFileSync(path.join(LAUNCHER, '..', 'LICENSE'), path.join(out, 'LICENSE.txt'));
 fs.copyFileSync(path.join(LAUNCHER, '..', 'port', 'LICENSE'), path.join(out, 'LICENSE-port.txt'));
 // A fresh copy has no settings, data or temp yet; make sure none slipped in.

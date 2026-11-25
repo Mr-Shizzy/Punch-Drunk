@@ -150,8 +150,8 @@ function renderSetup(s) {
   $('step-build').classList.toggle('done', g.built && !g.outdated);
   $('build-state').textContent = g.built ? (g.outdated ? 'Update available' : 'Built') : '';
   $('build-note').textContent = doc
-    ? 'Builds the game from your unpacked WAD on this computer. The first build takes a while; later ones are quicker.'
-    : 'Extracts your disc and builds the game on this computer. The first build takes a while; later ones are quicker.';
+    ? 'Builds the game from your unpacked WAD on this computer. It takes a while, and the build files are removed afterwards.'
+    : 'Extracts your disc and builds the game on this computer. It takes a while, and the build files are removed afterwards.';
   $('tool-managed').hidden = !s.tools.managed || s.tools.ok || !s.tools.managedText;
   $('tool-managed').textContent = s.tools.managedText || '';
   $('tool-hint').hidden = !toolsBlock;
@@ -432,6 +432,22 @@ $('capture-cancel').addEventListener('click', () => endCapture());
 $('lock-mouse').addEventListener('change', () => guarded(() => api.saveSettings({ controls: { lockMouse: $('lock-mouse').checked } })));
 $('controls-reset').addEventListener('click', () => guarded(() => api.saveSettings({ controls: { reset: true } })));
 
+// ---- updates ----
+function renderUpdate(s) {
+  const u = s.update || {};
+  const a = u.available;
+  $('update-bar').hidden = !a || Boolean(s.task);
+  if (a) {
+    $('update-title').textContent = `Version ${a.version} is available`;
+    // A failed attempt says why, right here (the status bar would say "Ready" again at once).
+    $('update-sub').textContent = u.note || (a.manual ? 'Get it from the download page.' : `About ${Math.round(a.size / 1048576)} MB. Your games and settings stay as they are.`);
+    $('update-bar').classList.toggle('failed', Boolean(u.note));
+    $('update-now').textContent = a.manual ? 'Open download page' : 'Update now';
+  }
+  $('update-auto').checked = u.auto !== false;
+  $('update-check').disabled = Boolean(u.checking);
+  $('update-note').textContent = u.note || '';
+}
 function render(s) {
   current = s;
   renderHome(s);
@@ -440,6 +456,7 @@ function render(s) {
   renderSettings(s);
   renderControls(s);
   renderTask(s.task);
+  renderUpdate(s);
   $('version').textContent = s.steamDeck ? `v${s.version} · Steam Deck` : `v${s.version}`;
   if (!s.task && !s.busy) setStatus(s.running ? 'Playing' : 'Ready');
 }
@@ -448,6 +465,19 @@ async function sync() {
 }
 
 // ---- actions ----
+$('update-now').addEventListener('click', () => guarded(async () => {
+  const a = current && current.update && current.update.available;
+  if (!a) return;
+  if (a.manual) await api.openExternal(a.page);
+  else await api.updateNow();
+}));
+$('update-later').addEventListener('click', () => guarded(async () => render(await api.updateLater())));
+$('update-notes').addEventListener('click', () => {
+  const a = current && current.update && current.update.available;
+  if (a) api.openExternal(a.page);
+});
+$('update-check').addEventListener('click', () => guarded(async () => render(await api.updateCheck())));
+$('update-auto').addEventListener('change', () => guarded(async () => render(await api.setUpdateAuto($('update-auto').checked))));
 $('recheck-tools').addEventListener('click', () => guarded(async () => render(await api.checkTools())));
 $('copy-tool-command').addEventListener('click', () => api.copyText($('tool-command').textContent).then(() => setStatus('Command copied')));
 $('choose-disc').addEventListener('click', () => guarded(async () => {

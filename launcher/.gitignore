@@ -2,4 +2,4 @@ node_modules/
 dist/
 build-steamdeck/
 dev-portable/
-vcruntime/
+buildkit/

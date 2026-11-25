@@ -228,6 +228,13 @@
       </div>
 
       <div class="card">
+        <h2>Updates</h2>
+        <label class="switch"><input type="checkbox" id="update-auto"><span>Look for a newer version when the launcher starts <span class="muted">· once a day at most</span></span></label>
+        <p class="muted small">This only asks GitHub whether a newer release exists; nothing about you or your games is sent. You always choose whether to install it, and your games, saves and settings stay where they are.</p>
+        <div class="row"><button class="secondary" id="update-check">Check now</button><span class="muted" id="update-note"></span></div>
+      </div>
+
+      <div class="card">
         <h2>Folders and logs</h2>
         <div class="row"><span class="label">Data folder</span><span class="path" id="data-root"></span><button class="secondary" id="choose-data-root">Change…</button></div>
         <div class="row"><span class="label">Port files</span><span class="path" id="port-source"></span><button class="secondary" id="choose-port-source">Change…</button></div>
@@ -254,6 +261,14 @@
       </div>
     </section>
   </main>
+
+  <div class="update-bar" id="update-bar" hidden>
+    <span class="update-text"><strong id="update-title"></strong> <span class="muted" id="update-sub"></span></span>
+    <span class="spacer"></span>
+    <button class="link" id="update-notes">What's new</button>
+    <button class="secondary" id="update-later">Remind me later</button>
+    <button class="primary" id="update-now">Update now</button>
+  </div>
 
   <div class="progress" id="progress" hidden>
     <div class="progress-text"><span id="progress-title"></span><span id="progress-detail"></span></div>

@@ -11,10 +11,9 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/wad.test.js test/art.test.js",
+    "test": "node --test test/wad.test.js test/art.test.js test/updater.test.js",
     "dist": "electron-builder --linux AppImage",
-    "dist:win": "node packaging/build_release.js",
-    "fetch:vcruntime": "node packaging/fetch_vcruntime.js"
+    "dist:win": "node packaging/build_release.js"
   },
   "devDependencies": {
     "electron": "^44.4.5",
@@ -65,11 +64,10 @@
       "icon": "build/icon.png",
       "extraResources": [
         {
-          "from": "vcruntime",
-          "to": "vcruntime",
+          "from": "buildkit",
+          "to": "buildkit",
           "filter": [
-            "*.dll",
-            "VERSION.json"
+            "**/*"
           ]
         }
       ]
