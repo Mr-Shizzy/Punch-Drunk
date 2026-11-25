@@ -11,7 +11,8 @@
       "to": "scripts",
       "filter": [
         "build_port.sh",
-        "build_port_steamdeck.sh"
+        "build_port_steamdeck.sh",
+        "setup_steamdeck_tools.sh"
       ]
     },
     {
@@ -19,14 +20,6 @@
       "to": "port-source",
       "filter": [
         "**/*"
-      ]
-    },
-    {
-      "from": "build-steamdeck",
-      "to": ".",
-      "filter": [
-        "buildroot.tar.xz",
-        "buildroot.version"
       ]
     }
   ],
@@ -37,6 +30,20 @@
     "artifactName": "Punch-Drunk-SteamDeck.${ext}",
     "executableArgs": [
       "--no-sandbox"
+    ],
+    "extraFiles": [
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "../port/LICENSE",
+        "to": "LICENSE-port.txt"
+      },
+      {
+        "from": "packaging/THIRD_PARTY_NOTICES-linux.txt",
+        "to": "THIRD_PARTY_NOTICES.txt"
+      }
     ]
   },
   "electronLanguages": [

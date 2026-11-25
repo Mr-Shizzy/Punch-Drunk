@@ -12,7 +12,9 @@ the download page; replace the AppImage by hand.
 
 ## Steam Deck
 
-Use `Punch-Drunk-SteamDeck.AppImage` in Desktop Mode. It carries its own build tools, so nothing needs installing.
+Use `Punch-Drunk-SteamDeck.AppImage` in Desktop Mode. Nothing needs installing: setup downloads the build tools
+(about 550 MB, Ubuntu's from Ubuntu and .NET from Microsoft) into the launcher's own folder. SteamOS isn't changed,
+and the tools are removed after a build, so a later rebuild downloads them again.
 
 ## Linux
 

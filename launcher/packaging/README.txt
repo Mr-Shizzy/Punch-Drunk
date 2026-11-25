@@ -5,11 +5,17 @@ Unofficial fan project. Not affiliated with or endorsed by Nintendo. Includes no
 bring your own Punch-Out!! (Wii, USA) disc image and, for Doc Louis's Punch-Out!!, your own
 WAD and your own console's Wii common key.
 
-Run "Punch-Drunk.exe". Nothing to install.
+Run "Punch-Drunk.exe". Nothing to install. Press "Set up" on a game and pick your disc image or WAD.
+Setting up a game needs no internet. If your PC doesn't have Microsoft's Visual C++ runtime (most do),
+the launcher gets it from Microsoft before the game starts, and Windows asks for permission once.
+
+Updates: the launcher checks GitHub for a newer version and asks before installing one. You can
+switch the check off in Settings.
 
 Portable: everything stays in this folder.
   settings.json   the launcher's settings
-  data\           build tools, your unpacked games, the built games, saves and logs
+  data\           your unpacked games, the built games, saves and logs (build files are removed
+                  after a build)
   temp\           temporary files (cleared automatically)
 Move or rename the folder whenever you like. To remove it, delete the folder.
 
@@ -21,3 +27,4 @@ The program isn't code-signed, so Windows SmartScreen or antivirus may warn the 
 Check this copy: run  Punch-Drunk.exe --selftest  and read selftest_result.txt.
 
 A fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
+Credits and licences: THIRD_PARTY_NOTICES.txt.

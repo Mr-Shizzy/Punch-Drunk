@@ -16,7 +16,8 @@ into the AppImage), `../recomp_wip` (development), a folder chosen in Settings >
 
 ## What it does
 
-1. Checks the build tools (git, .NET 8 SDK, cmake, ninja, clang) and shows the install command for your distribution.
+1. Checks the build tools. On Linux (git, .NET 8 SDK, cmake, ninja, clang) it shows the install command for your
+   distribution; the Windows and Steam Deck versions set up their own.
 2. Punch-Out!!: checks your disc with nodtool (downloaded and checksum-verified on first use) and extracts it; an
    already extracted disc folder (sys/main.dol + files/) works too.
    Doc Louis's Punch-Out!!: unpacks your WAD (`src/wad.js`) with the Wii common key you supply (your BootMii
@@ -30,8 +31,9 @@ into the AppImage), `../recomp_wip` (development), a folder chosen in Settings >
    reads the shared ones (controls, mouse lock, graphics, sound, button prompts) from there. Difficulty and
    Archipelago are Punch-Out!!'s only.
 
-Linux and Windows. Packaging: `npm run dist` (Linux AppImage), `npm run dist:win` (the portable Windows zip,
-`packaging/build_release.js`). Portable on Windows: settings.json, data and temp beside the exe, nothing in AppData;
+Windows, Linux and Steam Deck. Packaging: `npm run dist` (Linux AppImage), `bash steamdeck/make_steamdeck_appimage.sh`
+(Steam Deck AppImage; its build tools are downloaded on the Deck by `scripts/setup_steamdeck_tools.sh`),
+`npm run dist:win` (the portable Windows zip, `packaging/build_release.js`). Portable on Windows: settings.json, data and temp beside the exe, nothing in AppData;
 build tools get a home inside data for their caches. The Windows download carries a build kit (`packaging/fetch_buildkit.js`
 makes it: Git, WiiCompiled's source, the compiler, CMake, Ninja, the libraries, and the translator already built from that
 source plus `port/punchout_region.patch`), so setup needs no internet and the .NET SDK is never shipped (Microsoft's terms don't
@@ -40,8 +42,7 @@ allow it). A build unpacks what it needs into the data folder and removes it aft
 shipped either (its license doesn't allow that): if Windows lacks it, the launcher downloads Microsoft's own installer from
 Microsoft and runs it, with Windows' permission prompt, before the game starts.
 
-## Changing the logo
+## Changing the icon
 
-The glove in the top left is `src/assets/logo.png` (drawn from `src/assets/logo.svg`). The window uses the same file,
-and the AppImage's app icon is `build/icon.png` (512×512). To use your own logo, replace those two PNGs with square
-images of the same names and rebuild the AppImage. Transparent backgrounds look best.
+`build/icon.svg` is the drawing. `npx electron packaging/render_icon.js` makes `build/icon.png` (the packaged app's
+icon) and `src/assets/icon.png` (the window's) from it.

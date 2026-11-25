@@ -31,4 +31,18 @@ const WIICOMPILED = {
   aurora: { repo: 'https://github.com/patchzyy/aurora-wiicompiled', commit: '33067e34a17ca680eb961d9e0f3d48ddb22a7d7f' }
 };
 
-module.exports = { NODTOOL, MINGIT, DOTNET, WIICOMPILED };
+// Steam Deck: what its build tools start from, downloaded on the Deck during setup (scripts/setup_steamdeck_tools.sh).
+// Canonical's official Ubuntu Base, with the checksum from the SHA256SUMS file beside it, and Microsoft's Linux .NET 8
+// SDK, with the hash from Microsoft's release list.
+const DECK_UBUNTU = {
+  version: '24.04.5',
+  url: 'https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.5-base-amd64.tar.gz',
+  sha256: 'e77b6f10c2590cef872b33ee9f635a0e3fd1f57fb074c0e52b5c7f56147a0c86'
+};
+const DECK_DOTNET = {
+  version: '8.0.428',
+  url: 'https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.428/dotnet-sdk-8.0.428-linux-x64.tar.gz',
+  sha512: '33212bb99a2bf003973d41106c7e8fe94208a12958ff601d4a476be379403c85a7dc9183a6ec64dfb44ded7102965be09f35add1758e68e9251bae7891d7b7bf'
+};
+
+module.exports = { NODTOOL, MINGIT, DOTNET, WIICOMPILED, DECK_UBUNTU, DECK_DOTNET };

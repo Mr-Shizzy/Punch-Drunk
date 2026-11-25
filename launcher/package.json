@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/wad.test.js test/art.test.js test/updater.test.js",
-    "dist": "electron-builder --linux AppImage",
+    "dist": "node packaging/build_linux.js",
     "dist:win": "node packaging/build_release.js"
   },
   "devDependencies": {
@@ -50,6 +50,20 @@
       "artifactName": "Punch-Drunk.${ext}",
       "executableArgs": [
         "--no-sandbox"
+      ],
+      "extraFiles": [
+        {
+          "from": "../LICENSE",
+          "to": "LICENSE.txt"
+        },
+        {
+          "from": "../port/LICENSE",
+          "to": "LICENSE-port.txt"
+        },
+        {
+          "from": "packaging/THIRD_PARTY_NOTICES-linux.txt",
+          "to": "THIRD_PARTY_NOTICES.txt"
+        }
       ]
     },
     "win": {

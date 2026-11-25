@@ -18,8 +18,8 @@ You bring your own copies of the games. No game files are included.
 
 ## Linux and Steam Deck (experimental)
 
-- **Linux:** `Punch-Drunk.AppImage`. The build needs some packages first (the README has the exact line).
-- **Steam Deck:** `Punch-Drunk-SteamDeck.AppImage`. It carries its own build tools, so nothing needs installing. Run it in Desktop Mode.
+- **Linux:** `Punch-Drunk.AppImage`. The build needs some packages first ([LINUX.md](LINUX.md) has the exact line).
+- **Steam Deck:** `Punch-Drunk-SteamDeck.AppImage`. Nothing needs installing: setup downloads its build tools (from Ubuntu and Microsoft) into its own folder. Run it in Desktop Mode.
 - Both keep everything beside the AppImage, like the Windows version.
 - Only tested in WSL (Ubuntu 24.04 on Windows): the launcher starts and Punch-Out!! builds from a disc and runs. Nobody has played on a real Linux PC or Steam Deck yet.
 

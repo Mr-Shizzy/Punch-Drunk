@@ -1,0 +1,80 @@
+Punch-Drunk: Punch-Out (Wii) Recomp (Linux) - third-party notices
+==================================================================
+
+Punch-Drunk's own code
+----------------------
+
+Punch-Drunk is a fork of POW: Recompiled!! (https://gitlab.com/fist-in/POW-Recompiled).
+The launcher is MIT: LICENSE.txt. The port files (the changes to WiiCompiled) are GPL-3.0: LICENSE-port.txt.
+
+Shipped in this AppImage
+------------------------
+
+Electron (MIT) and Chromium (various open-source licences)
+  The launcher runs on Electron. Licence texts: LICENSE.electron.txt and LICENSES.chromium.html.
+
+Controller button glyphs: UI Elements by Arks (@ScissorMarks), CC BY 4.0 (https://arks.itch.io).
+
+Archipelago logo (c) 2022 by Krista Corkos and Christopher Wilson, CC BY-NC 4.0
+(http://creativecommons.org/licenses/by-nc/4.0/). Non-commercial use only.
+
+SMS Launcher by Chase Myers: controller navigation in the launcher (MIT)
+https://github.com/chasem-dev/sms-launcher
+  Copyright (c) 2026 Chase Myers
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+  associated documentation files (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial
+  portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+  LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+AppImage runtime (the small program at the front of the .AppImage file)
+  AppImageKit (MIT), https://github.com/AppImage/AppImageKit
+  It reads the file with squashfuse (BSD-2-Clause), and uses zlib (zlib licence) and liblzma
+  (public domain).
+
+  AppImageKit: Copyright (c) 2004-18 Simon Peter. MIT licence: the same permission text as under
+  SMS Launcher above, with this copyright line.
+
+  squashfuse:
+  Copyright (c) 2012 Dave Vasilevsky <dave@vasilevsky.ca>
+                     Phillip Lougher <phillip@squashfs.org.uk>
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without modification, are permitted
+  provided that the following conditions are met:
+  1. Redistributions of source code must retain the above copyright notice, this list of conditions
+     and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions
+     and the following disclaimer in the documentation and/or other materials provided with the
+     distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Downloaded during setup
+-----------------------
+
+The first build downloads the translator's source, libraries and build tools from their own publishers
+onto your computer. They aren't part of this download and keep their own licences.
+The Steam Deck version also downloads its build tools during setup: Ubuntu 24.04 and its packages from
+Ubuntu's own servers, and the .NET 8 SDK from Microsoft. Ubuntu is a trademark of Canonical Ltd. This
+project is not affiliated with, endorsed or certified by Canonical.
+
+Punch-Out!! and Doc Louis's Punch-Out!! are (c) Nintendo. Not affiliated with or endorsed by
+Nintendo. No game code or data is included.

@@ -20,6 +20,8 @@ Get it from [Releases](../../releases/latest).
 
 ## How to use it
 
+You need your own copies of the games. Only the **USA versions** work.
+
 1. Unzip it to a folder with a plain path, like `C:\Games\Punch-Drunk`.
 2. Run `Punch-Drunk.exe`.
 3. Press **Set up** on a game and pick your disc image (Punch-Out!!) or your WAD (Doc Louis's). The first build takes a
@@ -33,7 +35,7 @@ unpack the WAD and never saved.
 - **Portable.** No installer, everything stays in one folder.
 - **Easier setup.** One launcher for both games, no emulator needed for Doc Louis's.
 - **Works on external drives**, including exFAT SSDs.
-- **Windows setup needs no internet**, and the build files are removed again afterwards.
+- **Windows setup needs no internet**, and the build files are removed again afterwards. If your PC is missing Microsoft's Visual C++ runtime (most have it), the launcher downloads it once.
 - **Updates when you say so.** The launcher checks GitHub for a newer version (switch it off in Settings) and offers **Update now** or **Remind me later**. Your games, saves and settings stay put. On Linux and Steam Deck it just links the download page.
 - **Cheats** (off by default): invincible, unlimited stars, unlock all fighters, unlock the gallery.
 
@@ -47,12 +49,14 @@ The Windows exe is not code-signed, so SmartScreen or your antivirus may throw a
 ## Credits
 
 - [POW: Recompiled](https://gitlab.com/fist-in/POW-Recompiled) by fist-in, and [WiiCompiled](https://github.com/patchzyy/wiicompiled), which it's built on.
-- Other third-party credits are in `THIRD_PARTY_NOTICES.txt`.
+- Other third-party credits are in [THIRD_PARTY_NOTICES.txt](launcher/packaging/THIRD_PARTY_NOTICES.txt).
 
 ## AI Disclosure
 
 This project utilized AI to assist with some code, as well as debugging.
 
 ## License
+
+Punch-Drunk changes Copyright (C) 2026 Mr-Shizzy.
 
 The launcher is MIT ([LICENSE](LICENSE)). The `port/` folder is GPL-3.0, like WiiCompiled ([port/LICENSE](port/LICENSE)).

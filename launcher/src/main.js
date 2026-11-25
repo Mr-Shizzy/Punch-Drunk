@@ -24,7 +24,7 @@ const updater = require('./updater');
 const GAME_ID = 'R7PE01';
 const MAIN_DOL_MD5 = '1276cd5952e3b4c644925928786b3e20';
 // The pinned tools (nodtool, MinGit, the .NET SDK) and WiiCompiled's commits: src/pins.js.
-const { NODTOOL, MINGIT, DOTNET } = require('./pins');
+const { NODTOOL, MINGIT, DOTNET, DECK_UBUNTU, DECK_DOTNET } = require('./pins');
 // Doc Louis's Punch-Out!! (WiiWare, USA): title 00010001-57504345, and
 // the sha256 of its game code (content 1).
 const DOC_TITLE = ['00010001', '57504345'];
@@ -80,14 +80,18 @@ function dotnetSdkOk(listSdks) {
 }
 const DOTNET_INSTALL = 'curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0';
 
-// Steam Deck launcher: the same launcher plus its own build environment (resources/buildroot.tar.xz: Ubuntu 24.04
-// with the compiler, CMake, Ninja, Git and .NET 8; Release/make_steamdeck_appimage.sh). It's unpacked into the tools
-// folder once, and builds run inside it (scripts/build_port_steamdeck.sh, through bubblewrap): SteamOS can't install
-// build tools, and a game built there runs on SteamOS. Nothing else about the launcher changes.
-const BUILDROOT_ARCHIVE = path.join(process.resourcesPath || '', 'buildroot.tar.xz');
-const STEAM_DECK = !IS_WIN && fs.existsSync(BUILDROOT_ARCHIVE);
+// Steam Deck launcher: the same launcher plus a build environment of its own. SteamOS can't install build tools, so
+// setup puts them in the launcher's folder: Ubuntu 24.04 from Ubuntu's own servers and .NET 8 from Microsoft
+// (scripts/setup_steamdeck_tools.sh; none of it comes inside the download). Builds run inside that folder
+// (scripts/build_port_steamdeck.sh, through bubblewrap), and a game built there runs on SteamOS. Nothing else about the
+// launcher changes. This launcher is the one that carries the setup script.
+const DECK_SETUP = path.join(process.resourcesPath || '', 'scripts', 'setup_steamdeck_tools.sh');
+const STEAM_DECK = !IS_WIN && fs.existsSync(DECK_SETUP);
+// The tools are set up again when the script or what it starts from changes.
 function buildrootVersion() {
-  try { return fs.readFileSync(path.join(process.resourcesPath || '', 'buildroot.version'), 'utf8').trim(); } catch { return 'unknown'; }
+  let script = '';
+  try { script = fs.readFileSync(DECK_SETUP, 'utf8'); } catch { /* not the Steam Deck launcher */ }
+  return crypto.createHash('sha256').update(script + DECK_UBUNTU.sha256 + DECK_DOTNET.sha512).digest('hex').slice(0, 16);
 }
 const buildrootDir = () => path.join(paths().tools, 'buildroot');
 const buildrootMarker = () => path.join(buildrootDir(), '.re-punched-buildroot');
@@ -334,26 +338,44 @@ function checkBuildroot() {
   try { ok = fs.readFileSync(buildrootMarker(), 'utf8').trim() === buildrootVersion(); } catch { /* not set up */ }
   return {
     ok, missing: ok ? [] : ['buildroot'], hint: null, managed: true,
-    results: [{ name: 'buildroot', ok, need: 'Build tools (they come with this launcher)' }],
-    managedText: 'The build tools come inside this launcher. Setting them up unpacks them into the launcher\'s ' +
-      'folder (about 2 GB, a few minutes); nothing on the Steam Deck itself changes.',
+    results: [{ name: 'buildroot', ok, need: 'Build tools (downloaded during setup)' }],
+    managedText: 'The Steam Deck needs build tools to make the game. This gets them from Ubuntu and Microsoft into the ' +
+      'launcher\'s folder (about 550 MB to download; about 2 GB of space for the tools), and a finished build removes them. ' +
+      'Nothing on the Steam Deck itself changes.',
     installLabel: 'Set up build tools'
   };
 }
 
 async function installBuildroot() {
+  const p = paths();
   const dir = buildrootDir();
   const part = dir + '.part';
   await fsp.rm(part, { recursive: true, force: true });
   await fsp.mkdir(part, { recursive: true });
-  setTask({ label: 'Setting up the build tools', detail: 'Unpacking (a few minutes)', percent: null });
-  await spawnLogged('tar', ['-xJf', BUILDROOT_ARCHIVE, '-C', part, '--no-same-owner',
-    '--exclude=./dev/*', '--exclude=dev/*'], {}, () => {});
-  // The host's resolv.conf (DNS) is bound over this file in the build, which needs a plain file here, not the
-  // container's symlink or nothing.
-  const resolv = path.join(part, 'etc', 'resolv.conf');
-  await fsp.rm(resolv, { force: true });
-  await fsp.writeFile(resolv, '');
+  const base = await pinnedFile({ label: 'Ubuntu', kitName: path.basename(new URL(DECK_UBUNTU.url).pathname),
+    url: DECK_UBUNTU.url, algorithm: 'sha256', hash: DECK_UBUNTU.sha256, dest: path.join(p.tools, 'ubuntu-base.tar.gz') });
+  const dotnet = await pinnedFile({ label: '.NET 8', kitName: path.basename(new URL(DECK_DOTNET.url).pathname),
+    url: DECK_DOTNET.url, algorithm: 'sha512', hash: DECK_DOTNET.sha512, dest: path.join(p.tools, 'dotnet-sdk.tar.gz') });
+  const label = 'Setting up the build tools';
+  setTask({ label, detail: 'Starting', percent: null });
+  let total = 0, installed = 0, failure = '';
+  try {
+    await spawnLogged('bash', [DECK_SETUP, part, base.file, dotnet.file], {}, line => {
+      const step = /^@@STEP (.*)$/.exec(line);
+      if (step) { setTask({ label, detail: step[1], percent: null }); return; }
+      const problem = /^SETUP FAILED: (.*)$/.exec(line);
+      if (problem) failure = problem[1];
+      const plan = /^(\d+) upgraded, (\d+) newly installed/.exec(line);
+      if (plan) total = Number(plan[1]) + Number(plan[2]);
+      if (total && /^Setting up /.test(line)) {
+        installed = Math.min(installed + 1, total);
+        setTask({ label, detail: `Installing tool ${installed} of ${total}`, percent: percentOf(installed, total) });
+      }
+    });
+  } catch (err) {
+    throw new Error(`Setting up the build tools didn't work: ${failure || err.message}. Check the internet connection and try again; the activity log has the details.`);
+  }
+  for (const file of [base, dotnet]) if (file.temporary) await fsp.rm(file.file, { force: true });
   await fsp.writeFile(path.join(part, '.re-punched-buildroot'), buildrootVersion() + '\n');
   await fsp.rm(dir, { recursive: true, force: true });
   await fsp.rename(part, dir);
@@ -804,7 +826,7 @@ async function cleanUpAfterBuild() {
   const targets = [
     [p.work, ['wiicompiled', 'toolchain']],
     [gamePaths('doclouis').work, ['wiicompiled']],
-    [p.tools, ['git', 'dotnet', 'buildroot', 'dotnet-sdk.zip', /^nodtool-.*/, /^MinGit-.*\.zip(\.part)?$/]],
+    [p.tools, ['git', 'dotnet', 'buildroot', 'buildroot.part', 'dotnet-sdk.zip', /^(ubuntu-base|dotnet-sdk)\.tar\.gz(\.part)?$/, /^nodtool-.*/, /^MinGit-.*\.zip(\.part)?$/]],
     [path.join(p.root, 'build-home'), null] // the launcher's own folder for the build tools' caches and settings
   ];
   setTask({ label: 'Cleaning up', detail: 'Removing the build files', percent: null });
@@ -1461,6 +1483,7 @@ async function selfTest() {
       return v >= VC_RUNTIME_MIN ? `Windows has ${versionText(v)}` : `Windows has ${v ? versionText(v) : 'none'}; Microsoft's installer is fetched when Play is pressed`;
     });
   }
+  if (STEAM_DECK) await check('Steam Deck tool setup', () => { buildrootVersion(); if (!fs.existsSync(path.join(path.dirname(DECK_SETUP), 'build_port_steamdeck.sh'))) throw new Error('build_port_steamdeck.sh missing'); });
   await check('build script', () => { if (!fs.existsSync(buildScript())) throw new Error(`${path.basename(buildScript())} missing`); });
   if (IS_WIN && app.isPackaged) {
     // The Windows download carries its build kit: every file in its manifest has to be there at its full size.

@@ -38,7 +38,8 @@ run(process.execPath, [path.join(__dirname, 'fetch_buildkit.js')]);
 if (!fs.existsSync(path.join(LAUNCHER, 'buildkit', 'manifest.json'))) throw new Error('The build kit is missing');
 
 step('Building the app');
-fs.rmSync(DIST, { recursive: true, force: true });
+// Only what this script makes: the Linux AppImages in dist\release stay.
+for (const old of [UNPACKED, path.join(RELEASE, FOLDER), ZIP, `${ZIP}.sha256`]) fs.rmSync(old, { recursive: true, force: true });
 run(npx, ['electron-builder', '--win', 'dir', '--x64'], { shell: true });
 if (!fs.existsSync(path.join(UNPACKED, EXE))) throw new Error(`${EXE} wasn't built`);
 

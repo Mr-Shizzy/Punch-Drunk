@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # POW: Recompiled!! Steam Deck launcher: runs build_port.sh (its path is the first argument) inside the launcher's own
-# build environment (PO_BUILDROOT: an Ubuntu 24.04 tree with the compiler, CMake, Ninja, Git and .NET 8, unpacked by
-# the launcher) through bubblewrap. SteamOS needs nothing installed, and the game built there (against Ubuntu 24.04's
+# build environment (PO_BUILDROOT: an Ubuntu 24.04 tree with the compiler, CMake, Ninja, Git and .NET 8, which the
+# launcher sets up on this device) through bubblewrap. SteamOS needs nothing installed, and the game built there (against Ubuntu 24.04's
 # glibc) runs on SteamOS itself. The build's folders (PO_WORK, PO_DATA, PO_PORT, PO_LOGS, PO_SRC, PO_SEED) and the
 # home folder are the same paths inside as outside.
 set -uo pipefail
