@@ -22,8 +22,9 @@ args=(--bind "$ROOT" / --dev /dev --proc /proc --ro-bind /sys /sys --tmpfs /tmp 
       --ro-bind-try /etc/hosts /etc/hosts --share-net --die-with-parent)
 resolv=$(realpath /etc/resolv.conf 2>/dev/null) && [[ -f $resolv ]] && args+=(--ro-bind "$resolv" /etc/resolv.conf)
 args+=(--bind "$HOME" "$HOME")
-# The build's folders outside the home folder (an SD card, the AppImage's own mount for PO_SRC and this script).
-for dir in "$PO_WORK" "$PO_DATA" "$PO_PORT" "$PO_LOGS" "${PO_SEED:-}"; do
+# The build's folders outside the home folder (an SD card, the AppImage's own mount for PO_SRC and this script),
+# including the launcher's temp folder and the build tools' own home: without the temp folder, .NET can't start a build.
+for dir in "$PO_WORK" "$PO_DATA" "$PO_PORT" "$PO_LOGS" "${PO_SEED:-}" "${TMPDIR:-}" "${DOTNET_CLI_HOME:-}"; do
     [[ -n $dir && -d $dir && $dir != "$HOME"/* ]] && args+=(--bind "$dir" "$dir")
 done
 for dir in "$PO_SRC" "$(dirname "$INNER")"; do
