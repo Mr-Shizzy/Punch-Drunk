@@ -192,6 +192,15 @@
             <button class="seg" data-value="4">4×</button>
           </div>
         </div>
+        <div class="setting">
+          <span class="label">High refresh rate <small class="muted">(experimental)</small></span>
+          <div class="segmented" role="radiogroup" aria-label="High refresh rate (experimental)" data-setting="highRefresh">
+            <button class="seg" data-value="0">Off</button>
+            <button class="seg" data-value="120">120 FPS</button>
+            <button class="seg" data-value="180">180 FPS</button>
+          </div>
+        </div>
+        <p class="muted small">For screens faster than 60 Hz. The game still runs at its own speed; extra frames are drawn in between, so 3D movement can look smoother. It may add a little input delay or visual glitches, and it limits the resolution to 4×. VSync switches on by itself when your screen can show the extra frames. Choose Off if anything looks or feels wrong.</p>
         <label class="switch"><input type="checkbox" id="native-effects"><span>Effects at native resolution <span class="muted">· softer glow and blur, much easier on weaker graphics cards</span></span></label>
         <label class="switch"><input type="checkbox" id="show-fps"><span>Show frame rate <span class="muted">· the small counter in the corner of the game</span></span></label>
         <div class="setting">

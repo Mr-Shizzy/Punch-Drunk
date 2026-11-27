@@ -68254,7 +68254,7 @@ index 0000000..9eedabe
 +------------------------------------------------------------------------------
 +*/
 diff --git a/runtime/src/hle/vi.cpp b/runtime/src/hle/vi.cpp
-index cd236a9..3c5f75a 100644
+index cd236a9..04b42e8 100644
 --- a/runtime/src/hle/vi.cpp
 +++ b/runtime/src/hle/vi.cpp
 @@ -1,3 +1,4 @@
@@ -68400,7 +68400,7 @@ index cd236a9..3c5f75a 100644
      VI_HLE_ProcessRetracesDeferred(1);
  }
  
-@@ -517,10 +571,69 @@ void PaceToRetraceBoundary(Clock::time_point deadline) {
+@@ -517,10 +571,89 @@ void PaceToRetraceBoundary(Clock::time_point deadline) {
  // Single owner of the Aurora frame presentation sequence: seals the active frame, optionally paces the
  // producer to the VI retrace boundary, and pre-warms the next frame. Paced from GXCopyDisp; unpaced for
  // the retrace-context black/boot present path in AdvanceRetrace.
@@ -68449,6 +68449,26 @@ index cd236a9..3c5f75a 100644
 +                 st.late, st.unpacedPresents, st.gap[0], st.gap[1], st.gap[2], st.gap[3], st.presentMaxMs,
 +                 s_paceRetraceSkipped.exchange(0), g_punchOutPreemptions.exchange(0), pushes, starved, dropped,
 +                 minQ, maxQ, st.maxIndexBytes / 1024u, st.maxVertBytes / 1024u);
++    // High refresh rate (experimental): one more line while it is on, so a player's log shows what the screen got.
++    //   shown: frames put on screen per second; motion: those that carried new movement
++    //   unsafe: frames that could not be redrawn in between; late drops / reductions: the PC fell behind
++    AuroraFrameInterpolationDiagnostics interp{};
++    aurora_get_frame_interpolation_diagnostics(&interp);
++    if (interp.targetFps != 0) {
++        AuroraPresentTiming timing{};
++        aurora_get_present_timing(&timing);
++        std::fprintf(stderr,
++                     "[interp] target %u | display %.0f Hz (%s) | shown %.1f fps, motion %.1f | in-between frames %u of %u | "
++                     "draws matched %u of %u | frames %llu low-match %llu unsafe %llu late drops %llu reductions %llu\n",
++                     interp.targetFps, aurora_get_display_refresh_rate(),
++                     aurora_display_shows_interpolation() ? "in use" : "too slow to show them",
++                     timing.framesPerSecond, timing.effectiveFramesPerSecond, interp.activeSamples, interp.targetSamples,
++                     interp.matches, interp.matchable, static_cast<unsigned long long>(interp.framesSealed),
++                     static_cast<unsigned long long>(interp.framesLowMatch),
++                     static_cast<unsigned long long>(interp.framesReplayUnsafe),
++                     static_cast<unsigned long long>(interp.lateSealDrops),
++                     static_cast<unsigned long long>(interp.slotReductions));
++    }
 +    PunchOutPrintActivity(secs);
 +    FrameProfile::Report(st.frames);
 +    std::fflush(stderr);
@@ -68470,7 +68490,7 @@ index cd236a9..3c5f75a 100644
      struct SequenceGuard {
          ~SequenceGuard() { s_presentSequenceActive.store(false, std::memory_order_release); }
      } sequenceGuard;
-@@ -533,7 +646,7 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
+@@ -533,7 +666,7 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
          {
              std::lock_guard<std::mutex> lock(g_viMutex);
              EnsureInitializedLocked();
@@ -68479,7 +68499,7 @@ index cd236a9..3c5f75a 100644
              retraceCount = g_vi.retraceCount;
              baseNanos = static_cast<uint64_t>(
                  std::chrono::duration_cast<std::chrono::nanoseconds>(
-@@ -549,7 +662,11 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
+@@ -549,7 +682,11 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
          // but free-running late frames matches the previous pacer and keeps a
          // heavy scene at e.g. 50 fps instead of hard 30.
          const uint32_t retracesElapsed = retraceCount - s_lastPacedRetraceCount;
@@ -68492,7 +68512,7 @@ index cd236a9..3c5f75a 100644
          s_lastPacedRetraceCount = retraceCount;
          // aurora_report_producer_paced needs a different signal than the pace-wait above: the guest
          // self-paces via VIWaitForRetrace, so one retrace per produced frame is the healthy locked-60
-@@ -580,12 +697,49 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
+@@ -580,12 +717,49 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
      }
  
      EndAuroraFrame();
@@ -68542,7 +68562,7 @@ index cd236a9..3c5f75a 100644
      PerfStats::OnFramePresented();
      g_auroraFrameActive.store(false, std::memory_order_release);
      g_auroraFrameHadWork.store(false, std::memory_order_release);
-@@ -608,6 +762,7 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
+@@ -608,6 +782,7 @@ void VI_HLE_PresentFrame(bool presentedXfb, bool paceToRetrace) {
  // This marks that we now have valid framebuffer data to present.
  // -----------------------------------------------------------------------------
  void VI_HLE_SetXfbReady(uint32_t xfbAddr) {
@@ -68635,7 +68655,7 @@ index ad031c1..c2538a5 100644
      uint32_t archivePlayer = 0;
      uint32_t soundPlayers = 0;
 diff --git a/runtime/src/settings_overlay.cpp b/runtime/src/settings_overlay.cpp
-index 6c2083a..48fd416 100644
+index 6c2083a..3061b58 100644
 --- a/runtime/src/settings_overlay.cpp
 +++ b/runtime/src/settings_overlay.cpp
 @@ -1,4 +1,5 @@
@@ -68668,19 +68688,16 @@ index 6c2083a..48fd416 100644
  bool g_rumbleEnabled = RuntimeConfigFile::RumbleEnabled(true);
  int g_controllerPort = 0;
  float g_resolutionScale = RuntimeConfigFile::ResolutionMultiplier(1.0f);
-@@ -91,6 +95,11 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
+@@ -91,6 +95,8 @@ int32_t g_muteHotkey = RuntimeConfigFile::MuteHotkey(SDL_SCANCODE_BACKSLASH);
  bool g_audioMixWorker = RuntimeConfigFile::AudioMixWorkerEnabled(true);
  bool g_attenuateMusicWhenMediaPlays = RuntimeConfigFile::AttenuateMusicWhenMediaPlays(false);
  int g_frameInterpolationMode = [] {
-+    // Mario Kart Wii's race interpolation does not apply to Punch-Out!!, whose engine paces its
-+    // own 60 fps loop off the VI retrace: forced off there, whatever the config says.
-+    if (::GuestRegion::PunchOutEngine()) {
-+        return 0;
-+    }
++    // Punch-Out!! (experimental): the game keeps its own 60 fps loop, so its speed doesn't change. The renderer adds
++    // in-between frames of the 3D picture, shown only on a display faster than 60 Hz. Off unless chosen.
      switch (RuntimeConfigFile::FrameInterpolationFps(0)) {
      case 120:
          return 1;
-@@ -113,6 +122,7 @@ int g_displayMode = [] {
+@@ -113,6 +119,7 @@ int g_displayMode = [] {
  bool g_skipUnreadyPipelines = RuntimeConfigFile::SkipUnreadyPipelines(true);
  bool g_vsync = RuntimeConfigFile::Vsync();
  bool g_disableCopyFilter = RuntimeConfigFile::DisableCopyFilter(true);
@@ -68688,7 +68705,43 @@ index 6c2083a..48fd416 100644
  bool g_showFps = RuntimeConfigFile::ShowFps(true);
  bool g_forceAspect = RuntimeConfigFile::ForceAspectEnabled();
  bool g_widescreen = RuntimeConfigFile::WidescreenEnabled(true);
-@@ -251,6 +261,15 @@ void SetTopBarVisible(bool visible) {
+@@ -205,6 +212,35 @@ void LimitResolutionForFrameRate() {
+     }
+ }
+ 
++// Punch-Out!!'s high refresh rate is only smooth with VSync, so VSync switches on while the in-between frames can
++// actually be seen (high refresh chosen and a screen faster than 60 Hz), and goes back to the player's own setting
++// when they can't. The automatic change is never saved. Checked every frame, which covers the launcher's setting,
++// the F10 menu and moving the window to another screen; it acts only on a change, so the player can still switch
++// VSync off in F10.
++bool g_playerVSync = false;
++bool g_highRefreshInUse = false;
++void FollowHighRefreshWithVSync() {
++    if (!::GuestRegion::PunchOutEngine()) {
++        return;
++    }
++    const bool inUse = IsHighFrameRateMode() && aurora_get_display_refresh_rate() > 63.0;
++    if (inUse == g_highRefreshInUse) {
++        return;
++    }
++    g_highRefreshInUse = inUse;
++    if (inUse) {
++        g_playerVSync = g_vsync;
++    }
++    const bool wanted = inUse || g_playerVSync;
++    std::fprintf(stderr, "[interp] high refresh %s (screen %.0f Hz): VSync %s\n", inUse ? "in use" : "not in use",
++                 aurora_get_display_refresh_rate(), wanted ? "on" : "off");
++    if (wanted != g_vsync) {
++        GX_SYNC_INLINE();
++        g_vsync = wanted;
++        aurora_enable_vsync(wanted);
++    }
++}
++
+ using ControllerNames::FindNativeButton;
+ 
+ uint32_t ConfiguredNativeButton(const NativeButtonItem& item, const std::string& token) {
+@@ -251,6 +287,15 @@ void SetTopBarVisible(bool visible) {
      g_topBarVisible = visible;
  }
  
@@ -68704,7 +68757,7 @@ index 6c2083a..48fd416 100644
  void ApplyConfiguredMappings() {
      for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
          const int32_t controllerIndex = PADGetIndexForPort(port);
-@@ -435,7 +454,11 @@ const char* KeyBindingName(int scancode) {
+@@ -435,7 +480,11 @@ const char* KeyBindingName(int scancode) {
      }
  }
  
@@ -68717,7 +68770,7 @@ index 6c2083a..48fd416 100644
  struct RebindState {
      bool active = false;
      bool openPopup = false;
-@@ -452,6 +475,9 @@ struct RebindState {
+@@ -452,6 +501,9 @@ struct RebindState {
      std::array<bool, SDL_GAMEPAD_AXIS_COUNT> axesReady{};
  } g_rebind;
  
@@ -68727,7 +68780,7 @@ index 6c2083a..48fd416 100644
  void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secondary = false) {
      g_rebind = {};
      g_rebind.active = true;
-@@ -467,8 +493,11 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+@@ -467,8 +519,11 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
      std::copy_n(keys, std::min(count, static_cast<int>(g_rebind.keys.size())), g_rebind.keys.begin());
      g_rebind.mouse = SDL_GetMouseState(nullptr, nullptr);
      const int index = PADGetIndexForPort(g_rebind.port);
@@ -68741,7 +68794,7 @@ index 6c2083a..48fd416 100644
              g_rebind.instance = SDL_GetGamepadID(pad);
              for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; ++i)
                  g_rebind.buttons[i] = SDL_GetGamepadButton(pad, static_cast<SDL_GamepadButton>(i));
-@@ -480,6 +509,12 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
+@@ -480,6 +535,12 @@ void BeginRebind(RebindKind kind, uint16_t target, const char* label, bool secon
  
  void CompleteRebind(uint32_t value) {
      const auto& capture = g_rebind;
@@ -68754,7 +68807,7 @@ index 6c2083a..48fd416 100644
      if (capture.kind == RebindKind::Controller) {
          const int index = PADGetIndexForPort(capture.port);
          auto* pad = index >= 0 ? PADGetSDLGamepadForIndex(index) : nullptr;
-@@ -526,13 +561,17 @@ void DrawRebindPrompt() {
+@@ -526,13 +587,17 @@ void DrawRebindPrompt() {
      }
      if (g_rebind.active) {
          ImGui::Text("Rebind: %s", g_rebind.label.c_str());
@@ -68775,7 +68828,7 @@ index 6c2083a..48fd416 100644
          const float remaining = std::chrono::duration<float>(g_rebind.deadline - Clock::now()).count();
          ImGui::Text("Unmapped in %d seconds", std::max(0, static_cast<int>(std::ceil(remaining))));
          const bool clear = ImGui::Button("Clear mapping");
-@@ -540,22 +579,27 @@ void DrawRebindPrompt() {
+@@ -540,22 +605,27 @@ void DrawRebindPrompt() {
          if (ImGui::Button("Cancel")) g_rebind.active = false;
          // UI clicks must not become mouse bindings (buttons activate on release).
          const bool overControl = ImGui::IsAnyItemHovered();
@@ -68809,7 +68862,7 @@ index 6c2083a..48fd416 100644
              auto* pad = SDL_GetGamepadFromID(g_rebind.instance);
              if (pad != nullptr) {
                  for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT && g_rebind.active; ++i) {
-@@ -566,8 +610,13 @@ void DrawRebindPrompt() {
+@@ -566,8 +636,13 @@ void DrawRebindPrompt() {
                  for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT && g_rebind.active; ++i) {
                      const int value = SDL_GetGamepadAxis(pad, static_cast<SDL_GamepadAxis>(i));
                      if (std::abs(value) < 8000) g_rebind.axesReady[i] = true;
@@ -68824,7 +68877,7 @@ index 6c2083a..48fd416 100644
                  }
              }
          }
-@@ -1019,7 +1068,68 @@ void DrawPlayerRow(uint32_t port) {
+@@ -1019,7 +1094,68 @@ void DrawPlayerRow(uint32_t port) {
      ImGui::PopID();
  }
  
@@ -68893,39 +68946,18 @@ index 6c2083a..48fd416 100644
      ImGui::Dummy(ImVec2(kControllerMenuWidth, 0.0f));
      for (uint32_t port = 0; port < PAD_MAX_CONTROLLERS; ++port) {
          DrawPlayerRow(port);
-@@ -1205,13 +1315,15 @@ void DrawGraphicsSettings() {
-             "Requests the closest native-resolution display mode to the output frame "
-             "rate (60 Hz, or the frame interpolation target).");
-     }
-+    const bool offerFrameInterpolation = !::GuestRegion::PunchOutEngine();
-     constexpr std::array<const char*, 3> kFrameInterpolationModes{
-         "Off", "120 FPS", "180 FPS",
-     };
+@@ -1211,7 +1347,9 @@ void DrawGraphicsSettings() {
      const char* currentFrameInterpolationMode =
          kFrameInterpolationModes[static_cast<size_t>(g_frameInterpolationMode)];
      bool frameInterpolationModeChanged = false;
 -    if (ImGui::BeginCombo("Race frame interpolation (experimental)", currentFrameInterpolationMode)) {
-+    if (offerFrameInterpolation &&
-+        ImGui::BeginCombo("Race frame interpolation (experimental)", currentFrameInterpolationMode)) {
++    if (ImGui::BeginCombo(::GuestRegion::PunchOutEngine() ? "High refresh rate (experimental)"
++                                                          : "Race frame interpolation (experimental)",
++                          currentFrameInterpolationMode)) {
          for (int mode = 0; mode < static_cast<int>(kFrameInterpolationModes.size()); ++mode) {
              const bool selected = g_frameInterpolationMode == mode;
              if (ImGui::Selectable(kFrameInterpolationModes[static_cast<size_t>(mode)], selected)) {
-@@ -1235,9 +1347,11 @@ void DrawGraphicsSettings() {
-             aurora_set_display_mode(AURORA_DISPLAY_MODE_EXCLUSIVE);
-         }
-     }
--    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 380.0f);
--    ImGui::TextDisabled("Frame interpolation is experimental, you might find visual artifacts");
--    ImGui::PopTextWrapPos();
-+    if (offerFrameInterpolation) {
-+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 380.0f);
-+        ImGui::TextDisabled("Frame interpolation is experimental, you might find visual artifacts");
-+        ImGui::PopTextWrapPos();
-+    }
- #if defined(__APPLE__)
-     const bool metalFxSupported = aurora_is_metalfx_spatial_supported();
-     ImGui::BeginDisabled(!metalFxSupported);
-@@ -1273,6 +1387,13 @@ void DrawGraphicsSettings() {
+@@ -1273,6 +1411,13 @@ void DrawGraphicsSettings() {
          aurora_set_disable_copy_filter(g_disableCopyFilter);
          RuntimeConfigFile::SetDisableCopyFilter(g_disableCopyFilter);
      }
@@ -68939,7 +68971,15 @@ index 6c2083a..48fd416 100644
      if (ImGui::Checkbox("Skip draws while shaders compile", &g_skipUnreadyPipelines)) {
          GX_SYNC_INLINE();
          aurora_set_skip_unready_pipelines(g_skipUnreadyPipelines);
-@@ -1390,7 +1511,7 @@ void DrawStartupScreen() {
+@@ -1281,6 +1426,7 @@ void DrawGraphicsSettings() {
+     if (ImGui::Checkbox("VSync", &g_vsync)) {
+         aurora_enable_vsync(g_vsync);
+         RuntimeConfigFile::SetVsync(g_vsync);
++        g_playerVSync = g_vsync; // their own choice, kept when high refresh stops being in use
+     }
+     if (ImGui::Checkbox("Show FPS", &g_showFps)) {
+         RuntimeConfigFile::SetShowFps(g_showFps);
+@@ -1390,7 +1536,7 @@ void DrawStartupScreen() {
                                          ImGuiWindowFlags_NoBringToFrontOnFocus;
      if (ImGui::Begin("Wiicompiled Startup", nullptr, kFlags)) {
          ImGui::SetWindowFontScale(1.25f);
@@ -68948,7 +68988,7 @@ index 6c2083a..48fd416 100644
          const ImVec2 titleSize = ImGui::CalcTextSize(kTitle);
          const float titleX = std::max(0.0f, (viewport->Size.x - titleSize.x) * 0.5f);
          const float startY = std::max(0.0f, (viewport->Size.y - titleSize.y) * 0.5f);
-@@ -1438,6 +1559,8 @@ void DrawExitPrompt() {
+@@ -1438,6 +1584,8 @@ void DrawExitPrompt() {
      if (g_exitPromptOpen && !ImGui::IsPopupOpen(kTitle)) ImGui::OpenPopup(kTitle);
      if (!ImGui::BeginPopupModal(kTitle, &g_exitPromptOpen, ImGuiWindowFlags_AlwaysAutoResize)) return;
      ImGui::TextUnformatted("Quit the game?");
@@ -68957,7 +68997,7 @@ index 6c2083a..48fd416 100644
      if (ImGui::Button("Exit", ImVec2(120.0f, 0.0f))) ExitForAuroraWindowClose();
      ImGui::SameLine();
      if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f))) g_exitPromptOpen = false;
-@@ -1458,8 +1581,10 @@ void DrawRestartPrompt() {
+@@ -1458,8 +1606,10 @@ void DrawRestartPrompt() {
      ImGui::EndPopup();
  }
  
@@ -68969,7 +69009,7 @@ index 6c2083a..48fd416 100644
          return;
      }
  
-@@ -1533,6 +1658,10 @@ void DrawTopBar() {
+@@ -1533,6 +1683,10 @@ void DrawTopBar() {
          ImGui::EndMenu();
      }
  
@@ -68980,7 +69020,7 @@ index 6c2083a..48fd416 100644
      const ImGuiStyle& style = ImGui::GetStyle();
      const float hideWidth = ImGui::CalcTextSize("Hide (F10)").x + style.FramePadding.x * 2.0f;
      const float exitWidth = ImGui::CalcTextSize("X").x + style.FramePadding.x * 2.0f;
-@@ -1542,7 +1671,7 @@ void DrawTopBar() {
+@@ -1542,7 +1696,7 @@ void DrawTopBar() {
          SetTopBarVisible(false);
      }
      if (ImGui::MenuItem("X")) {
@@ -68989,7 +69029,7 @@ index 6c2083a..48fd416 100644
      }
      ImGui::EndMainMenuBar();
  }
-@@ -1578,8 +1707,26 @@ bool IsMouseActivity(const SDL_Event& event) {
+@@ -1578,8 +1732,26 @@ bool IsMouseActivity(const SDL_Event& event) {
  // Runs on the thread that pumps SDL events (the same one that calls Draw), so
  // the SDL cursor calls are safe here.
  void UpdateCursorAutoHide() {
@@ -69017,7 +69057,7 @@ index 6c2083a..48fd416 100644
      if (shouldHide == g_cursorHidden) {
          return;
      }
-@@ -1636,6 +1783,8 @@ void InitializeRuntimeSettings() noexcept {
+@@ -1636,6 +1808,8 @@ void InitializeRuntimeSettings() noexcept {
      aurora_set_display_mode(static_cast<AuroraDisplayMode>(g_displayMode));
      g_displayMode = static_cast<int>(aurora_get_display_mode());
      aurora_set_disable_copy_filter(g_disableCopyFilter);
@@ -69026,7 +69066,7 @@ index 6c2083a..48fd416 100644
      aurora_set_skip_unready_pipelines(g_skipUnreadyPipelines);
      g_strapInputAccepted.store(false, std::memory_order_relaxed);
      g_startupDismissFrame.store(UINT64_MAX, std::memory_order_relaxed);
-@@ -1658,13 +1807,18 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+@@ -1658,13 +1832,18 @@ void HandleEvents(const AuroraEvent* events) noexcept {
              continue;
          }
          controller_mapping_wizard::HandleSdlEvent(ev->sdl);
@@ -69048,7 +69088,7 @@ index 6c2083a..48fd416 100644
              ApplyInputBlockState();
          }
          if (!g_rebind.active && g_muteHotkey != PAD_KEY_INVALID &&
-@@ -1681,7 +1835,7 @@ void HandleEvents(const AuroraEvent* events) noexcept {
+@@ -1681,7 +1860,7 @@ void HandleEvents(const AuroraEvent* events) noexcept {
              } else if (g_topBarVisible) {
                  SetTopBarVisible(false);
              } else if (!ValveControllerConnected()) {
@@ -69057,7 +69097,7 @@ index 6c2083a..48fd416 100644
              }
              ApplyInputBlockState();
          }
-@@ -1713,16 +1867,28 @@ void ReleaseControllers() noexcept {
+@@ -1713,16 +1892,29 @@ void ReleaseControllers() noexcept {
      if (queued) SDL_Delay(120);
  }
  
@@ -69078,6 +69118,7 @@ index 6c2083a..48fd416 100644
      if (!StartupScreenVisible()) {
          DrawShaderCompilationStatus();
      }
++    FollowHighRefreshWithVSync();
      DrawFpsOverlay();
 +    if (!StartupScreenVisible() && ::GuestRegion::PunchOutEngine()) PunchOut_DrawPromptBanner();
 +    if (!StartupScreenVisible() && ::GuestRegion::Current() == ::GuestRegion::Id::PunchOut) {

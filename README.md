@@ -14,7 +14,7 @@ Get it from [Releases](../../releases/latest).
 
 | Your computer | File |
 | --- | --- |
-| Windows 10/11 | `Punch-Drunk-1.0.0-Windows-x64.zip` |
+| Windows 10/11 | `Punch-Drunk-1.1.0-Windows-x64.zip` |
 | Linux (experimental) | `Punch-Drunk.AppImage`, see [LINUX.md](LINUX.md) |
 | Steam Deck (experimental) | `Punch-Drunk-SteamDeck.AppImage`, see [LINUX.md](LINUX.md) |
 
@@ -38,6 +38,7 @@ unpack the WAD and never saved.
 - **Windows setup needs no internet**, and the build files are removed again afterwards. If your PC is missing Microsoft's Visual C++ runtime (most have it), the launcher downloads it once.
 - **Updates when you say so.** The launcher checks GitHub for a newer version (switch it off in Settings) and offers **Update now** or **Remind me later**. Your games, saves and settings stay put. On Linux and Steam Deck it just links the download page.
 - **Cheats** (off by default): invincible, unlimited stars, unlock all fighters, unlock the gallery.
+- **High refresh rate (experimental,** off by default): extra in-between frames for screens faster than 60 Hz. The game's speed doesn't change. Not yet tried on such a screen.
 
 The full list is in [FORK_CHANGES.md](FORK_CHANGES.md).
 

@@ -1,6 +1,6 @@
 {
   "name": "punch-drunk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Punch-Drunk: Punch-Out (Wii) Recomp. A portable launcher that builds the Punch-Out!! (Wii) and Doc Louis's Punch-Out!! PC ports on your computer from your own copies",
   "main": "src/main.js",

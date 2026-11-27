@@ -902,6 +902,7 @@ async function play() {
 // The values WiiCompiled accepts (IsSupportedResolutionMultiplier / IsSupportedDisplayMode).
 const GRAPHICS_RESOLUTIONS = [0, 1, 1.5, 2, 3, 4, 6, 8];
 const GRAPHICS_DISPLAY_MODES = ['windowed', 'borderless', 'exclusive'];
+const HIGH_REFRESH_RATES = [0, 120, 180]; // the values the game accepts for frame_interpolation_fps
 
 // Punch-Out!! controls: [punchout_controls] in Config.toml, the same keys and defaults as the game
 // (runtime punchout_controls.cpp). Per control: key, key2 (SDL key names or "Mouse Left"...), pad, pad2 (SDL gamepad
@@ -977,6 +978,8 @@ function readGameSettings() {
       nativeEffects: get('video', 'native_effect_copies', false) === true,
       showFps: get('video', 'show_fps', false) === true,
       smoothEdges: Number(get('video', 'msaa', 1)) === 4, // anti-aliasing: msaa 4 = on, 1 = off
+      // High refresh rate (experimental): frame_interpolation_fps, in-between frames for screens faster than 60 Hz.
+      highRefresh: HIGH_REFRESH_RATES.includes(Number(get('video', 'frame_interpolation_fps', 0))) ? Number(get('video', 'frame_interpolation_fps', 0)) : 0,
       resolution: GRAPHICS_RESOLUTIONS.includes(Number(get('video', 'resolution_multiplier', 1))) ? Number(get('video', 'resolution_multiplier', 1)) : 1,
       displayMode: GRAPHICS_DISPLAY_MODES.includes(get('video', 'display_mode', 'windowed')) ? get('video', 'display_mode', 'windowed') : 'windowed'
     },
@@ -1036,6 +1039,8 @@ function writeGameSettings(s) {
     if (typeof g.nativeEffects === 'boolean') text = toml.set(text, 'video', 'native_effect_copies', g.nativeEffects);
     if (typeof g.showFps === 'boolean') text = toml.set(text, 'video', 'show_fps', g.showFps);
     if (typeof g.smoothEdges === 'boolean') text = toml.set(text, 'video', 'msaa', g.smoothEdges ? 4 : 1);
+    // (The game itself switches VSync on while the in-between frames can be shown, so VSync isn't written here.)
+    if (HIGH_REFRESH_RATES.includes(g.highRefresh)) text = toml.set(text, 'video', 'frame_interpolation_fps', g.highRefresh);
     if (GRAPHICS_RESOLUTIONS.includes(g.resolution)) text = toml.set(text, 'video', 'resolution_multiplier', g.resolution);
     if (GRAPHICS_DISPLAY_MODES.includes(g.displayMode)) text = toml.set(text, 'video', 'display_mode', g.displayMode);
   }

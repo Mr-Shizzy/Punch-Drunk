@@ -215,6 +215,7 @@ function renderSettings(s) {
   $('native-effects').checked = g.nativeEffects;
   $('show-fps').checked = g.showFps;
   setSegmented('antialiasing', g.smoothEdges ? '4' : '1');
+  setSegmented('highRefresh', String(g.highRefresh));
   $('resolution-note').textContent = resolutionNote(g);
   $('graphics-note').textContent = s.running
     ? 'The game is running, so changes here apply the next time it starts. To change them now, press F10 in the game.'
@@ -580,6 +581,7 @@ const SEGMENT_SAVE = {
   widescreen: v => ({ graphics: { widescreen: v === 'true' } }),
   resolution: v => ({ graphics: { resolution: Number(v) } }),
   antialiasing: v => ({ graphics: { smoothEdges: v === '4' } }),
+  highRefresh: v => ({ graphics: { highRefresh: Number(v) } }),
   displayMode: v => ({ graphics: { displayMode: v } })
 };
 for (const group of document.querySelectorAll('.segmented[data-setting]')) {

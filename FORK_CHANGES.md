@@ -34,6 +34,7 @@ You bring your own copies of the games. No game files are included.
 - **Escape opens the Exit box with the mouse free**, so you can click Quit. Enter also confirms.
 - **Show frame rate** switch in Settings (off by default).
 - **Anti-aliasing** setting: Off or 4×.
+- **High refresh rate (experimental, new in 1.1.0):** Settings > Graphics offers Off (default), 120 FPS or 180 FPS for screens faster than 60 Hz. The game still runs at its own 60 fps, so its speed doesn't change; the renderer draws extra frames in between, so 3D movement can look smoother. It may add a little input delay or visual glitches, and it limits the resolution to 4×. VSync switches on by itself while the screen can show the extra frames (chosen here or in the in-game F10 menu); otherwise your VSync setting is left alone. On a 60 Hz screen it has no effect on the picture. **It hasn't been tried on a screen faster than 60 Hz yet**, so reports are welcome: turn on Show frame rate, and attach `data/logs/game.log`.
 - **Clearer resolution labels:** each choice shows its pixel height (Native 480p, 720p, 960p, 1440p, 1920p, 2880p, 3840p), plus a line spelling out the exact size.
 - **Lock aspect ratio is on by default** for new setups. On larger or wider monitors the picture keeps its aspect ratio, with black bars on each side, instead of stretching. You can turn it off in Settings. (It doesn't add extra scenery on the sides.)
 - **Cheats** for Punch-Out!! (Settings > Cheats, all off by default): Invincible Little Mac, Unlimited stars, Unlock all fighters, and Unlock the gallery (all the music and the movies; it finishes your career and marks every challenge done). They switch themselves off while Archipelago is on. The two unlock cheats change your save for good, so the launcher makes a backup copy first. They only touch a profile that exists, so deleting a profile while a cheat is on does not leave an unlock behind for the next new profile.
@@ -49,7 +50,6 @@ You bring your own copies of the games. No game files are included.
 ## Not changed
 
 - The fight HUD stays where the original game puts it in 16:9. The original game does the same.
-- Frame interpolation was looked at and left out (it needs a display faster than 60 Hz to be worth it).
 
 ## What has been tested
 
